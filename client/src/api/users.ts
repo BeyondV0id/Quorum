@@ -1,0 +1,23 @@
+import { API_URL } from "@/config";
+import type { UserSummary } from "@/types";
+
+export async function searchUsers(query: string): Promise<UserSummary[]> {
+  const params = new URLSearchParams({ q: query });
+  const res = await fetch(`${API_URL}/users/search?${params}`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("Failed to search users");
+  return res.json();
+}
+
+export async function resolveUsers(usernames: string[]): Promise<string[]> {
+  const res = await fetch(`${API_URL}/users/resolve`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ usernames }),
+  });
+  if (!res.ok) throw new Error("Failed to resolve users");
+  const data = await res.json();
+  return data.existing || [];
+}

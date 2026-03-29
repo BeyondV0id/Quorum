@@ -1,0 +1,18 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#0f0f0f"/>
+  <!-- Hatched grid pattern overlay (subtle) -->
+  <defs>
+    <pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#ffffff" stroke-width="0.4" opacity="0.08"/>
+    </pattern>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#grid)"/>
+  <!-- Q lettermark -->
+  <!-- Outer circle of Q -->
+  <circle cx="248" cy="240" r="130" stroke="#f0f0f0" stroke-width="36" fill="none"/>
+  <!-- Tail of Q -->
+  <line x1="338" y1="330" x2="398" y2="398" stroke="#f0f0f0" stroke-width="36" stroke-linecap="square"/>
+  <!-- Inner dot accent -->
+  <circle cx="248" cy="240" r="18" fill="#f0f0f0" opacity="0.3"/>
+</svg>

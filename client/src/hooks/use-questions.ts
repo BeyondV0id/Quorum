@@ -1,0 +1,153 @@
+import type { QuestionItem } from "@/types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchQuestion,
+  fetchQuestions,
+  createQuestion,
+  deleteQuestion,
+  updateQuestion,
+  fetchUserQuestions,
+  searchQuestions,
+  pinQuestion,
+  unpinQuestion,
+} from "@/api/questions";
+
+export function useQuestionQuery(questionId: string | undefined) {
+  return useQuery({
+    queryKey: ["question", questionId],
+    queryFn: () => fetchQuestion(questionId!),
+    enabled: !!questionId,
+    staleTime: 30_000,
+  });
+}
+
+export function useQuestionsQuery(
+  sort?: "votes" | "time_created",
+  filter?: "joined",
+  chamberId?: string,
+  author?: string
+) {
+  return useQuery({
+    queryKey: ["questions", sort, filter, chamberId, author],
+    queryFn: () => fetchQuestions(sort, filter, chamberId, author),
+    staleTime: 30_000,
+  });
+}
+
+export function useUserQuestionsQuery() {
+  return useQuery({
+    queryKey: ["user-questions"],
+    queryFn: () => fetchUserQuestions(),
+    staleTime: 30_000,
+  });
+}
+
+export function useTrendingQuestions() {
+  return useQuery({
+    queryKey: ["questions", "votes"],
+    queryFn: () => fetchQuestions("votes"),
+    staleTime: 60_000,
+  });
+}
+
+export function useCreateQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createQuestion,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
+    },
+  });
+}
+
+export function useDeleteQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (questionId: string) => deleteQuestion(questionId),
+    onMutate: async (questionId) => {
+      await queryClient.cancelQueries({ queryKey: ["questions"] });
+      await queryClient.cancelQueries({ queryKey: ["user-questions"] });
+
+      const questionsCache = queryClient.getQueryCache();
+      const matchingQueries = questionsCache.findAll({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return key[0] === "questions" || key[0] === "user-questions";
+        },
+      });
+
+      const previousData = matchingQueries.map((query) => ({
+        queryKey: query.queryKey,
+        data: query.state.data as QuestionItem[] | undefined,
+      }));
+
+      matchingQueries.forEach((query) => {
+        const data = query.state.data as QuestionItem[] | undefined;
+        if (!data) return;
+        const filtered = data.filter((item) => item.question.uid !== questionId);
+        queryClient.setQueryData(query.queryKey, filtered);
+      });
+
+      return { previousData };
+    },
+    onError: (_err, _questionId, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
+    },
+  });
+}
+
+export function useUpdateQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ questionId, content }: { questionId: string; content: string }) =>
+      updateQuestion(questionId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
+    },
+  });
+}
+
+export function usePinQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (questionId: string) => pinQuestion(questionId),
+    onSuccess: (_data, questionId) => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["search-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["question", questionId] });
+    },
+  });
+}
+
+export function useUnpinQuestion() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (questionId: string) => unpinQuestion(questionId),
+    onSuccess: (_data, questionId) => {
+      queryClient.invalidateQueries({ queryKey: ["questions"] });
+      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["search-questions"] });
+      queryClient.invalidateQueries({ queryKey: ["question", questionId] });
+    },
+  });
+}
+
+export function useSearchQuestions(query: string) {
+  return useQuery({
+    queryKey: ["search-questions", query],
+    queryFn: () => searchQuestions(query),
+    enabled: query.length > 0,
+    staleTime: 30_000,
+  });
+}
