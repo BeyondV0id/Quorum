@@ -15,7 +15,7 @@ export default defineConfig({
         name: "Echo - An Open QnA Platform",
         short_name: "Echo",
         description:
-          "Echo is an open Q&A platform where you can ask questions, share knowledge, and connect with communities through chambers.",
+          "Echo is an open Q&A platform where you can ask questions, share knowledge, and connect with communities through spaces.",
         theme_color: "#171717",
         background_color: "#171717",
         display: "standalone",
@@ -52,7 +52,7 @@ export default defineConfig({
               return (
                 url.origin.includes("echo-server.up.railway.app") &&
                 url.pathname.match(
-                  /^\/(auth|users|questions|chambers|search)/
+                  /^\/(auth|users|questions|spaces|search)/
                 ) &&
                 true
               );

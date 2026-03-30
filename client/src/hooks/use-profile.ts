@@ -1,13 +1,14 @@
 import { fetchProfile, updateProfile, fetchPublicProfile } from "@/api/profile";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "./use-simple";
 import type { User } from "@/types";
+
 export function useFetchProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
-    staleTime: 2 * 60 * 1000,
   });
 }
+
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -24,6 +25,5 @@ export function useFetchPublicProfile(username?: string) {
     queryKey: ["profile", username],
     queryFn: () => fetchPublicProfile(username!),
     enabled: !!username,
-    staleTime: 2 * 60 * 1000,
   });
 }

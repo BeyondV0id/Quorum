@@ -27,14 +27,14 @@ export function CreateSpaceDialog({
 }: CreateSpaceDialogProps) {
   const navigate = useNavigate();
   const { mutate: createSpace, isPending } = useCreateSpace();
-  const [space, setChamber] = useState<Space>({
+  const [space, setSpace] = useState<Space>({
     name: "",
     description: "",
     colorIndex: 0,
   });
 
   const updateSpace = (fields: Partial<Space>) => {
-    return setChamber((prev) => {
+    return setSpace((prev) => {
       return { ...prev, ...fields };
     });
   };
@@ -43,10 +43,10 @@ export function CreateSpaceDialog({
     e.preventDefault();
     if (isPending || !space.name.trim() || !space.description.trim()) return;
     createSpace(space, {
-      onSuccess: (newChamber) => {
+      onSuccess: (newSpace) => {
         onOpenChange(false);
-        if (newChamber?.uid) {
-          navigate(`/space/${newChamber.uid}`);
+        if (newSpace?.uid) {
+          navigate(`/space/${newSpace.uid}`);
           toast.success("Space created successfully");
         }
       },

@@ -94,7 +94,7 @@ export const verification = pgTable(
 
 // ─── App tables ───────────────────────────────────────────────────────────────
 
-export const chambers = pgTable("chambers", {
+export const spaces = pgTable("spaces", {
   uid: uuid("uid").primaryKey().defaultRandom(),
   name: text("name").notNull().unique(),
   description: text("description"),
@@ -105,10 +105,10 @@ export const chambers = pgTable("chambers", {
   colorIndex: integer("color_index").default(0),
 });
 
-export const chamberMembers = pgTable("chamber_members", {
-  chamberUid: uuid("chamber_uid")
+export const spaceMembers = pgTable("space_members", {
+  spaceUid: uuid("space_uid")
     .notNull()
-    .references(() => chambers.uid, { onDelete: "cascade" }),
+    .references(() => spaces.uid, { onDelete: "cascade" }),
   username: text("username")
     .notNull()
     .references(() => user.username, { onUpdate: "cascade", onDelete: "cascade" }),
@@ -122,9 +122,9 @@ export const questions = pgTable("questions", {
   author: text("author")
     .notNull()
     .references(() => user.username, { onUpdate: "cascade", onDelete: "cascade" }),
-  chamberUid: uuid("chamber_uid")
+  spaceUid: uuid("space_uid")
     .notNull()
-    .references(() => chambers.uid, { onDelete: "cascade" }),
+    .references(() => spaces.uid, { onDelete: "cascade" }),
   upvotesCount: integer("upvotes_count").default(0),
   acceptedAnswerUid: uuid("accepted_answer_uid"),
   pinnedAt: timestamp("pinned_at"),
@@ -181,7 +181,7 @@ export const notifications = pgTable("notifications", {
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
-  ownedChambers: many(chambers),
+  ownedSpaces: many(spaces),
   questions: many(questions),
   answers: many(answers),
   notifications: many(notifications),
@@ -195,20 +195,20 @@ export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
 }));
 
-export const chambersRelations = relations(chambers, ({ one, many }) => ({
-  members: many(chamberMembers),
+export const spacesRelations = relations(spaces, ({ one, many }) => ({
+  members: many(spaceMembers),
   questions: many(questions),
   // named 'creatorUser' to avoid conflict with the text column 'creatorUsername'
-  creatorUser: one(user, { fields: [chambers.creatorUsername], references: [user.username] }),
+  creatorUser: one(user, { fields: [spaces.creatorUsername], references: [user.username] }),
 }));
 
-export const chamberMembersRelations = relations(chamberMembers, ({ one }) => ({
-  chamber: one(chambers, { fields: [chamberMembers.chamberUid], references: [chambers.uid] }),
-  memberUser: one(user, { fields: [chamberMembers.username], references: [user.username] }),
+export const spaceMembersRelations = relations(spaceMembers, ({ one }) => ({
+  space: one(spaces, { fields: [spaceMembers.spaceUid], references: [spaces.uid] }),
+  memberUser: one(user, { fields: [spaceMembers.username], references: [user.username] }),
 }));
 
 export const questionsRelations = relations(questions, ({ one, many }) => ({
-  chamber: one(chambers, { fields: [questions.chamberUid], references: [chambers.uid] }),
+  space: one(spaces, { fields: [questions.spaceUid], references: [spaces.uid] }),
   // named 'authorUser' to avoid conflict with the text column 'author'
   authorUser: one(user, { fields: [questions.author], references: [user.username] }),
   answers: many(answers),

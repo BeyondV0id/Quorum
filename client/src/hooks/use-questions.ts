@@ -1,5 +1,5 @@
-import type { QuestionItem } from "@/types";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useQuery, useMutation, useQueryClient } from "./use-simple";
 import {
   fetchQuestion,
   fetchQuestions,
@@ -17,20 +17,18 @@ export function useQuestionQuery(questionId: string | undefined) {
     queryKey: ["question", questionId],
     queryFn: () => fetchQuestion(questionId!),
     enabled: !!questionId,
-    staleTime: 30_000,
   });
 }
 
 export function useQuestionsQuery(
   sort?: "votes" | "time_created",
   filter?: "joined",
-  chamberId?: string,
+  spaceId?: string,
   author?: string
 ) {
   return useQuery({
-    queryKey: ["questions", sort, filter, chamberId, author],
-    queryFn: () => fetchQuestions(sort, filter, chamberId, author),
-    staleTime: 30_000,
+    queryKey: ["questions", sort, filter, spaceId, author],
+    queryFn: () => fetchQuestions(sort, filter, spaceId, author),
   });
 }
 
@@ -38,7 +36,6 @@ export function useUserQuestionsQuery() {
   return useQuery({
     queryKey: ["user-questions"],
     queryFn: () => fetchUserQuestions(),
-    staleTime: 30_000,
   });
 }
 
@@ -46,7 +43,6 @@ export function useTrendingQuestions() {
   return useQuery({
     queryKey: ["questions", "votes"],
     queryFn: () => fetchQuestions("votes"),
-    staleTime: 60_000,
   });
 }
 
@@ -65,39 +61,6 @@ export function useDeleteQuestion() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (questionId: string) => deleteQuestion(questionId),
-    onMutate: async (questionId) => {
-      await queryClient.cancelQueries({ queryKey: ["questions"] });
-      await queryClient.cancelQueries({ queryKey: ["user-questions"] });
-
-      const questionsCache = queryClient.getQueryCache();
-      const matchingQueries = questionsCache.findAll({
-        predicate: (query) => {
-          const key = query.queryKey;
-          return key[0] === "questions" || key[0] === "user-questions";
-        },
-      });
-
-      const previousData = matchingQueries.map((query) => ({
-        queryKey: query.queryKey,
-        data: query.state.data as QuestionItem[] | undefined,
-      }));
-
-      matchingQueries.forEach((query) => {
-        const data = query.state.data as QuestionItem[] | undefined;
-        if (!data) return;
-        const filtered = data.filter((item) => item.question.uid !== questionId);
-        queryClient.setQueryData(query.queryKey, filtered);
-      });
-
-      return { previousData };
-    },
-    onError: (_err, _questionId, context) => {
-      if (context?.previousData) {
-        context.previousData.forEach(({ queryKey, data }) => {
-          queryClient.setQueryData(queryKey, data);
-        });
-      }
-    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["questions"] });
       queryClient.invalidateQueries({ queryKey: ["user-questions"] });
@@ -148,6 +111,5 @@ export function useSearchQuestions(query: string) {
     queryKey: ["search-questions", query],
     queryFn: () => searchQuestions(query),
     enabled: query.length > 0,
-    staleTime: 30_000,
   });
 }

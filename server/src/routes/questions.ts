@@ -4,7 +4,7 @@ import { eq, ilike, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
-import { questions, chambers, questionUpvotes, notifications, answers } from "../db/schema.js";
+import { questions, spaces, questionUpvotes, notifications, answers } from "../db/schema.js";
 
 const router = Router();
 
@@ -19,7 +19,7 @@ const authorWith = {
   columns: { username: true, bio: true, avatar: true, links: true, posted: true, answered: true },
 } as const;
 
-const chamberWith = {
+const spaceWith = {
   columns: { uid: true, name: true },
 } as const;
 
@@ -40,8 +40,8 @@ function mapQ(r: any) {
       upvotes: r.upvotesCount ?? 0,
       isUpvoted: r.isUpvoted,
       authorUsername: r.author,
-      chamberUid: r.chamber?.uid,
-      chamberName: r.chamber?.name,
+      spaceUid: r.space?.uid,
+      spaceName: r.space?.name,
       acceptedAnswerUid: r.acceptedAnswerUid ?? "",
       isPinned: !!r.pinnedAt,
     },
@@ -63,7 +63,7 @@ router.get("/search", requireAuth, async (req: Request, res: Response): Promise<
   const q = (req.query.q as string) ?? "";
   if (!q) { res.json([]); return; }
   const rows = await db.query.questions.findMany({
-    with: { chamber: chamberWith, authorUser: authorWith },
+    with: { space: spaceWith, authorUser: authorWith },
     extras: questionExtras(username!),
     where: ilike(questions.content!, `%${q}%`),
     orderBy: [desc(questions.timeCreated)],
@@ -77,14 +77,14 @@ router.get("/search", requireAuth, async (req: Request, res: Response): Promise<
 router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const { limit, offset } = parsePagination(req);
-  const { sort, filter, chamber_uid, author } = req.query as Record<string, string>;
+  const { sort, filter, space_uid, author } = req.query as Record<string, string>;
 
   const conditions = [];
-  if (chamber_uid) conditions.push(eq(questions.chamberUid, chamber_uid));
+  if (space_uid) conditions.push(eq(questions.spaceUid, space_uid));
   if (author) conditions.push(eq(questions.author, author));
   if (filter === "joined") {
     conditions.push(sql`EXISTS(
-      SELECT 1 FROM chamber_members cm WHERE cm.chamber_uid = questions.chamber_uid AND cm.username = ${username}
+      SELECT 1 FROM space_members cm WHERE cm.space_uid = questions.space_uid AND cm.username = ${username}
     )`);
   }
   const orderBy =
@@ -93,7 +93,7 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
     [desc(questions.timeCreated)];
 
   const rows = await db.query.questions.findMany({
-    with: { chamber: chamberWith, authorUser: authorWith },
+    with: { space: spaceWith, authorUser: authorWith },
     extras: questionExtras(username!),
     where: conditions.length ? and(...conditions) : undefined,
     orderBy,
@@ -106,10 +106,10 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 // POST /questions
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { content, chamberUid } = req.body as { content: string; chamberUid: string };
-  if (!chamberUid) { res.status(400).json({ error: "chamber uid is required" }); return; }
+  const { content, spaceUid } = req.body as { content: string; spaceUid: string };
+  if (!spaceUid) { res.status(400).json({ error: "space uid is required" }); return; }
   try {
-    await db.insert(questions).values({ content, author: username!, chamberUid });
+    await db.insert(questions).values({ content, author: username!, spaceUid });
     res.status(201).json({ message: "question created" });
   } catch { res.status(500).json({ error: "failed to create question" }); }
 });
@@ -118,7 +118,7 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
 router.get("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const row = await db.query.questions.findFirst({
-    with: { chamber: chamberWith, authorUser: authorWith },
+    with: { space: spaceWith, authorUser: authorWith },
     extras: questionExtras(username!),
     where: eq(questions.uid, req.params.uid),
   });
@@ -186,11 +186,11 @@ router.post("/:uid/votes", requireAuth, async (req: Request, res: Response): Pro
 router.post("/:uid/pin", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const q = await db.query.questions.findFirst({
-    with: { chamber: { columns: { creatorUsername: true } } },
+    with: { space: { columns: { creatorUsername: true } } },
     where: eq(questions.uid, req.params.uid),
   });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
-  if (q.chamber?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
+  if (q.space?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
   await db.update(questions).set({ pinnedAt: new Date() }).where(eq(questions.uid, req.params.uid));
   res.json({ message: "question pinned" });
 });
@@ -199,11 +199,11 @@ router.post("/:uid/pin", requireAuth, async (req: Request, res: Response): Promi
 router.delete("/:uid/pin", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const q = await db.query.questions.findFirst({
-    with: { chamber: { columns: { creatorUsername: true } } },
+    with: { space: { columns: { creatorUsername: true } } },
     where: eq(questions.uid, req.params.uid),
   });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
-  if (q.chamber?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
+  if (q.space?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
   await db.update(questions).set({ pinnedAt: null }).where(eq(questions.uid, req.params.uid));
   res.json({ message: "question unpinned" });
 });

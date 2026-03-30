@@ -257,12 +257,12 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.chamber_members": {
-      "name": "chamber_members",
+    "public.space_members": {
+      "name": "space_members",
       "schema": "",
       "columns": {
-        "chamber_uid": {
-          "name": "chamber_uid",
+        "space_uid": {
+          "name": "space_uid",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -283,12 +283,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "chamber_members_chamber_uid_chambers_uid_fk": {
-          "name": "chamber_members_chamber_uid_chambers_uid_fk",
-          "tableFrom": "chamber_members",
-          "tableTo": "chambers",
+        "space_members_space_uid_spaces_uid_fk": {
+          "name": "space_members_space_uid_spaces_uid_fk",
+          "tableFrom": "space_members",
+          "tableTo": "spaces",
           "columnsFrom": [
-            "chamber_uid"
+            "space_uid"
           ],
           "columnsTo": [
             "uid"
@@ -296,9 +296,9 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "chamber_members_username_user_username_fk": {
-          "name": "chamber_members_username_user_username_fk",
-          "tableFrom": "chamber_members",
+        "space_members_username_user_username_fk": {
+          "name": "space_members_username_user_username_fk",
+          "tableFrom": "space_members",
           "tableTo": "user",
           "columnsFrom": [
             "username"
@@ -316,8 +316,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.chambers": {
-      "name": "chambers",
+    "public.spaces": {
+      "name": "spaces",
       "schema": "",
       "columns": {
         "uid": {
@@ -362,9 +362,9 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "chambers_creator_username_user_username_fk": {
-          "name": "chambers_creator_username_user_username_fk",
-          "tableFrom": "chambers",
+        "spaces_creator_username_user_username_fk": {
+          "name": "spaces_creator_username_user_username_fk",
+          "tableFrom": "spaces",
           "tableTo": "user",
           "columnsFrom": [
             "creator_username"
@@ -378,8 +378,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "chambers_name_unique": {
-          "name": "chambers_name_unique",
+        "spaces_name_unique": {
+          "name": "spaces_name_unique",
           "nullsNotDistinct": false,
           "columns": [
             "name"
@@ -557,8 +557,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "chamber_uid": {
-          "name": "chamber_uid",
+        "space_uid": {
+          "name": "space_uid",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -598,12 +598,12 @@
           "onDelete": "cascade",
           "onUpdate": "cascade"
         },
-        "questions_chamber_uid_chambers_uid_fk": {
-          "name": "questions_chamber_uid_chambers_uid_fk",
+        "questions_space_uid_spaces_uid_fk": {
+          "name": "questions_space_uid_spaces_uid_fk",
           "tableFrom": "questions",
-          "tableTo": "chambers",
+          "tableTo": "spaces",
           "columnsFrom": [
-            "chamber_uid"
+            "space_uid"
           ],
           "columnsTo": [
             "uid"

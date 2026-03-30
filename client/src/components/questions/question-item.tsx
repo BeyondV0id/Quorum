@@ -42,7 +42,7 @@ import { MentionText } from "@/components/mentions/mention-text";
 type QuestionItemProps = {
   questionItem: QuestionItem;
   onDelete: (id: string) => void;
-  showChamberName?: boolean;
+  showSpaceName?: boolean;
   canPin?: boolean;
 };
 
@@ -79,7 +79,7 @@ const TriggerWrapper = ({
 export function QuestionItem({
   questionItem,
   onDelete,
-  showChamberName,
+  showSpaceName,
   canPin,
 }: QuestionItemProps) {
   const question = questionItem?.question;
@@ -142,9 +142,9 @@ export function QuestionItem({
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   {question.authorUsername || "Anonymous"}
                 </span>
-                {showChamberName && question.chamberName && (
+                {showSpaceName && question.spaceName && (
                   <span className="text-xs text-neutral-400 dark:text-neutral-500">
-                    in {question.chamberName}
+                    in {question.spaceName}
                   </span>
                 )}
                 <span className="text-xs text-neutral-400 dark:text-neutral-500">

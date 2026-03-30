@@ -29,10 +29,10 @@ export function UpvoteButton({
         onToggle();
       }}
       className={cn(
-        "gap-1 px-2 h-7 text-neutral-500 hover:bg-transparent hover:text-neutral-900 dark:hover:text-neutral-100 group/upvote transition-all duration-200 active:scale-95",
+        "gap-1 px-2 h-7 text-neutral-500 hover:bg-transparent hover:text-neutral-900 dark:hover:text-neutral-100 group/upvote transition-all duration-200",
         className,
         isUpvoted &&
-          "text-orange-500 hover:text-orange-600 dark:text-orange-500 dark:hover:text-orange-500",
+          "text-blue-500 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-500",
       )}
     >
       <HugeiconsIcon icon={CircleArrowUp01Icon} className="size-4 transition-transform group-hover/upvote:-translate-y-0.5" />

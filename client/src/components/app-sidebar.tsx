@@ -126,8 +126,8 @@ function CreateQueryDialog({
   const { mutate: createQuestion, isPending } = useCreateQuestion();
   const [isValidating, setIsValidating] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<string>("");
-  const { data: allChambers = [] } = useListSpaces();
-  const spaces = allChambers.filter((c) => c.isJoined);
+  const { data: allSpaces = [] } = useListSpaces();
+  const spaces = allSpaces.filter((c) => c.isJoined);
   const handleSubmit = async () => {
     if (!content.trim() || !selectedSpace || isPending || isValidating) return;
     setIsValidating(true);
@@ -139,7 +139,7 @@ function CreateQueryDialog({
         return;
       }
       createQuestion(
-        { content, chamberUid: selectedSpace },
+        { content, spaceUid: selectedSpace },
         {
           onSuccess: () => {
             setContent("");

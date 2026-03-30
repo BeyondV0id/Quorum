@@ -85,7 +85,7 @@ router.get("/me/questions", requireAuth, async (req: Request, res: Response): Pr
   const offset = Number(req.query.offset) || 0;
   const rows = await db.query.questions.findMany({
     with: {
-      chamber: { columns: { uid: true, name: true } },
+      space: { columns: { uid: true, name: true } },
       authorUser: { columns: authorColumns },
     },
     extras: {
@@ -147,8 +147,8 @@ function mapQuestionRow(r: any) {
       upvotes: r.upvotesCount ?? 0,
       isUpvoted: r.isUpvoted,
       authorUsername: r.author,
-      chamberUid: r.chamber?.uid,
-      chamberName: r.chamber?.name,
+      spaceUid: r.space?.uid,
+      spaceName: r.space?.name,
       acceptedAnswerUid: r.acceptedAnswerUid ?? "",
       isPinned: !!r.pinnedAt,
     },

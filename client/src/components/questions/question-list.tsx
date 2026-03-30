@@ -8,11 +8,11 @@ import { BubbleChatIcon } from "@hugeicons/core-free-icons";
 type QuestionListProps = {
   questions: QuestionItem[];
   onDelete?: (id: string) => void;
-  showChamberName?: boolean;
+  showSpaceName?: boolean;
   canPin?: boolean;
 };
 
-export function QuestionList({ questions, onDelete, showChamberName, canPin }: QuestionListProps) {
+export function QuestionList({ questions, onDelete, showSpaceName, canPin }: QuestionListProps) {
   return questions.length > 0 ? (
     <Accordion className="dark:bg-[#0f1112]">
       {questions.map((questionItem, index) => (
@@ -20,7 +20,7 @@ export function QuestionList({ questions, onDelete, showChamberName, canPin }: Q
           key={questionItem.question.uid ?? index}
           questionItem={questionItem}
           onDelete={onDelete || (() => { })}
-          showChamberName={showChamberName}
+          showSpaceName={showSpaceName}
           canPin={canPin}
         />
       ))}

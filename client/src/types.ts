@@ -7,8 +7,8 @@ export interface Question {
   authorUsername: string;
   upvotes: number;
   isUpvoted: boolean;
-  chamberUid?: string;
-  chamberName?: string;
+  spaceUid?: string;
+  spaceName?: string;
   acceptedAnswerUid?: string;
   isPinned?: boolean;
 }
@@ -42,7 +42,7 @@ export interface SearchResponse {
 }
 export interface QuestionDraft {
   content: string;
-  chamberUid?: string;
+  spaceUid?: string;
 }
 export interface Reply {
   uid: ReplyId;

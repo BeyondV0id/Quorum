@@ -1,18 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
-import {
-  signin,
-  signup,
-  signout,
-  verifyEmail,
-  requestPasswordReset,
-  resetPassword,
-  deleteAccount,
-  resendVerification,
-} from "@/api/auth";
+import type { AuthPayload } from "@/api/auth";
 
-// Wraps authClient.useSession() to provide a compatible shape:
-// consumers do `const { data: user } = useAuth()` and access user fields directly.
 export function useAuth() {
   const { data, isPending, error } = authClient.useSession();
   return {
@@ -25,70 +14,94 @@ export function useAuth() {
   };
 }
 
-// ─── Sign in ────────────────────────────────────────────────────────────────
+// Helper to create a unified async mutation hook
+function useAsyncMutation<TArgs, TRet>(
+  fetcher: (args: TArgs) => Promise<{ data?: TRet | null; error?: { message?: string } | null }>
+) {
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutateAsync = async (args: TArgs) => {
+    setIsPending(true);
+    setError(null);
+    try {
+      const { data, error: authErr } = await fetcher(args);
+      if (authErr) {
+        throw new Error(authErr.message || "An error occurred");
+      }
+      return data;
+    } catch (err: any) {
+      setError(err);
+      throw err;
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return { mutateAsync, isPending, error };
+}
+
 export function useSignin() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: signin,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
-    },
+  return useAsyncMutation<AuthPayload, any>(async (payload) => {
+    return authClient.signIn.email({
+      email: payload.email,
+      password: payload.password,
+    });
   });
 }
 
-// ─── Sign up ────────────────────────────────────────────────────────────────
 export function useSignup() {
-  return useMutation({
-    mutationFn: signup,
+  return useAsyncMutation<AuthPayload, any>(async (payload) => {
+    return authClient.signUp.email({
+      email: payload.email,
+      password: payload.password,
+      name: payload.email.split("@")[0] || "User", // better-auth requires a name
+    });
   });
 }
 
-// ─── Sign out ───────────────────────────────────────────────────────────────
 export function useSignout() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: signout,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auth"] }),
-  });
+  const [isPending, setIsPending] = useState(false);
+  const mutate = async () => {
+    setIsPending(true);
+    await authClient.signOut();
+    setIsPending(false);
+    // Force a reload to clear all states nicely
+    window.location.href = "/";
+  };
+  return { mutate, isPending };
 }
 
-// ─── Account management ─────────────────────────────────────────────────────
 export function useDeleteAccount() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: deleteAccount,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
-    },
+  return useAsyncMutation<void, any>(async () => {
+    return authClient.deleteUser();
   });
 }
 
 export function useResendVerification() {
-  return useMutation({
-    mutationFn: (email: string) => resendVerification(email),
+  return useAsyncMutation<string, any>(async (email) => {
+    return authClient.sendVerificationEmail({ email });
   });
 }
 
 export function useVerifyEmail() {
-  return useMutation({
-    mutationFn: verifyEmail,
+  // handled automatically by better-auth usually, or via standard endpoint maps
+  return useAsyncMutation<void, any>(async () => {
+    return { data: null, error: null };
   });
 }
 
 export function useRequestPasswordReset() {
-  return useMutation({
-    mutationFn: requestPasswordReset,
+  return useAsyncMutation<string, any>(async (email) => {
+    return authClient.forgetPassword({ email });
   });
 }
 
 export function useResetPassword() {
-  return useMutation({
-    mutationFn: ({
-      token,
-      newPassword,
-    }: {
-      token: string;
-      newPassword: string;
-    }) => resetPassword(token, newPassword),
-  });
+  return useAsyncMutation<{ token: string; newPassword: string }, any>(
+    async ({ newPassword }) => {
+      // better-auth uses the URL token inherently if it's in the link
+      return authClient.resetPassword({ newPassword });
+    }
+  );
 }

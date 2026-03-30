@@ -30,18 +30,18 @@ function formatMemberCount(count: number): string {
   }
   return count.toString();
 }
-export default function ChamberPage() {
-  const { chamberId } = useParams<{ chamberId: string }>();
+export default function SpacePage() {
+  const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
-  const { data: chambersData, isLoading: isChamberLoading } = useListSpaces();
+  const { data: spacesData, isLoading: isSpaceLoading } = useListSpaces();
   const { data: user } = useAuth();
-  const spaces = chambersData || [];
-  const space = spaces.find((c) => c.uid === chamberId);
+  const spaces = spacesData || [];
+  const space = spaces.find((c) => c.uid === spaceId);
   const { mutate: deleteQn } = useDeleteQuestion();
   const { data: questionsData, isLoading } = useQuestionsQuery(
     "time_created",
     undefined,
-    chamberId,
+    spaceId,
   );
   const questions = questionsData || [];
   const joinMutation = useJoinSpace();
@@ -49,7 +49,7 @@ export default function ChamberPage() {
   const isPending = joinMutation.isPending || leaveMutation.isPending;
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  if (isChamberLoading) {
+  if (isSpaceLoading) {
     return (
       <div className="max-w-[40rem] w-full md:mt-24 mt-16 px-4 space-y-8">
         <div className="flex items-start gap-4">

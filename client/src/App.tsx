@@ -11,8 +11,8 @@ const Home = lazy(() => import("@/pages/home"));
 const Profile = lazy(() => import("@/pages/profile"));
 const PublicProfile = lazy(() => import("@/pages/public-profile"));
 const Explore = lazy(() => import("@/pages/explore"));
-const AllChambers = lazy(() => import("@/pages/all-spaces"));
-const ChamberPage = lazy(() => import("@/pages/space"));
+const AllSpaces = lazy(() => import("@/pages/all-spaces"));
+const SpacePage = lazy(() => import("@/pages/space"));
 const Notifications = lazy(() => import("@/pages/notifications"));
 const Auth = lazy(() => import("@/pages/auth"));
 const Landing = lazy(() => import("@/pages/landing"));
@@ -60,8 +60,8 @@ export default function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/u/:username" element={<PublicProfile />} />
                 <Route path="/explore" element={<Explore />} />
-                <Route path="/spaces" element={<AllChambers />} />
-                <Route path="/space/:chamberId" element={<ChamberPage />} />
+                <Route path="/spaces" element={<AllSpaces />} />
+                <Route path="/space/:spaceId" element={<SpacePage />} />
                 <Route path="/notifications" element={<Notifications />} />
               </Route>
               <Route path="/" element={<Navigate to="/home" replace />} />

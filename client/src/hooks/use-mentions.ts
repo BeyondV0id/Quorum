@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "./use-simple";
 import { searchUsers } from "@/api/users";
 
 export function useMentionUsers(query: string) {
@@ -6,6 +6,5 @@ export function useMentionUsers(query: string) {
     queryKey: ["mention-users", query],
     queryFn: () => searchUsers(query),
     enabled: query.length > 0,
-    staleTime: 60_000,
   });
 }

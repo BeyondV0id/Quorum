@@ -53,7 +53,7 @@ function ReplyResult({ item }: { item: AnswerItem }) {
 }
 export default function Explore() {
   const [query, setQuery] = useState("");
-  const [createSpaceOpen, setCreateChamberOpen] = useState(false);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
   const navigate = useNavigate();
 
   const { data: searchResults, isLoading: isSearching } =
@@ -64,20 +64,20 @@ export default function Explore() {
     error: trendingError,
   } = useQuestionsQuery("votes");
   const { mutate: deleteQuestion } = useDeleteQuestion();
-  const { data: spaces = [], isLoading: isChambersLoading } =
+  const { data: spaces = [], isLoading: isSpacesLoading } =
     useListSpaces();
 
   const isSearchMode = query.length > 0;
   const isLoading = isSearchMode ? isSearching : isTrendingLoading;
   const {
     users,
-    spaces: searchChambers,
+    spaces: searchSpaces,
     questions: searchQuestions,
     replies,
   } = searchResults;
   const hasSearchResults =
     users.length > 0 ||
-    searchChambers.length > 0 ||
+    searchSpaces.length > 0 ||
     searchQuestions.length > 0 ||
     replies.length > 0;
 
@@ -139,12 +139,12 @@ export default function Explore() {
                   </div>
                 </div>
               )}
-              {searchChambers.length > 0 && (
+              {searchSpaces.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-medium text-neutral-900 dark:text-neutral-100 px-1">
                     Spaces
                   </h3>
-                  <SpaceList spaces={searchChambers} />
+                  <SpaceList spaces={searchSpaces} />
                 </div>
               )}
               {searchQuestions.length > 0 && (
@@ -195,12 +195,12 @@ export default function Explore() {
                 <HugeiconsIcon icon={ArrowRight01Icon} className="size-3" />
               </Button>
             </div>
-            {isChambersLoading ? (
+            {isSpacesLoading ? (
               <SpaceListSkeleton count={3} />
             ) : (
               <SpaceList spaces={spaces} limit={3} />
             )}
-            <CreateSpaceButton onClick={() => setCreateChamberOpen(true)} />
+            <CreateSpaceButton onClick={() => setCreateSpaceOpen(true)} />
           </div>
           <div className="space-y-4">
             <h3 className="font-medium text-neutral-900 dark:text-neutral-100 px-1">
@@ -223,7 +223,7 @@ export default function Explore() {
       )}
       <CreateSpaceDialog
         open={createSpaceOpen}
-        onOpenChange={setCreateChamberOpen}
+        onOpenChange={setCreateSpaceOpen}
       />
     </PageTransition>
   );

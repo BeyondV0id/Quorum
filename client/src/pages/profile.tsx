@@ -62,7 +62,7 @@ export default function Profile() {
   const { mutate: updateProfile } = useUpdateProfile();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [createSpaceOpen, setCreateChamberOpen] = useState(false);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
   const {
     data: qnData,
     isLoading: isQnLoading,
@@ -82,7 +82,7 @@ export default function Profile() {
     answered: 0,
     posted: 0,
   });
-  const { data: spaces = [], isLoading: isChambersLoading } =
+  const { data: spaces = [], isLoading: isSpacesLoading } =
     useListSpaces();
   const JOINED_SPACES = spaces.filter((c) => c.isJoined);
   const handleSubmit = (e: React.FormEvent) => {
@@ -306,13 +306,13 @@ export default function Profile() {
             variant="outline"
             size="default"
             className="h-7 text-xs gap-1 hover:text-neutral-900 dark:hover:text-neutral-100"
-            onClick={() => setCreateChamberOpen(true)}
+            onClick={() => setCreateSpaceOpen(true)}
           >
             <HugeiconsIcon icon={Add01Icon} className="size-3" />
             Create Space
           </Button>
         </div>
-        {isChambersLoading ? (
+        {isSpacesLoading ? (
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <SpacePillSkeleton key={i} />
@@ -440,7 +440,7 @@ export default function Profile() {
       </Dialog>
       <CreateSpaceDialog
         open={createSpaceOpen}
-        onOpenChange={setCreateChamberOpen}
+        onOpenChange={setCreateSpaceOpen}
       />
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>

@@ -120,8 +120,8 @@ import { DashedEmptyState } from "@/components/ui/dashed-empty-state";
 import { Search01Icon } from "@hugeicons/core-free-icons";
 
 export function SpaceList({ spaces, limit }: SpaceListProps) {
-  const displayChambers = limit ? spaces.slice(0, limit) : spaces;
-  if (displayChambers.length === 0) {
+  const displaySpaces = limit ? spaces.slice(0, limit) : spaces;
+  if (displaySpaces.length === 0) {
     return (
       <DashedEmptyState
         title="No spaces found"
@@ -132,7 +132,7 @@ export function SpaceList({ spaces, limit }: SpaceListProps) {
   }
   return (
     <div className="space-y-2">
-      {displayChambers.map((space, i) => (
+      {displaySpaces.map((space, i) => (
         <SpaceCard
           key={space.uid || i}
           space={{ ...space, colorIndex: space.colorIndex ?? i }}

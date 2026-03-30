@@ -13,13 +13,13 @@ export async function fetchQuestion(questionId: string) {
 export async function fetchQuestions(
   sort?: "votes" | "time_created",
   filter?: "joined",
-  chamberId?: string,
+  spaceId?: string,
   author?: string,
 ) {
   const params = new URLSearchParams({
     ...(sort ? { sort } : {}),
     ...(filter ? { filter } : {}),
-    ...(chamberId ? { chamber_uid: chamberId } : {}),
+    ...(spaceId ? { space_uid: spaceId } : {}),
     ...(author ? { author } : {}),
   });
   const res = await fetch(`${API_URL}/questions?${params}`, {

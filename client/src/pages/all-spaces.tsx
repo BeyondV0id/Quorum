@@ -12,12 +12,12 @@ import { useNavigate } from "react-router";
 import { SpaceListSkeleton } from "@/components/ui/skeletons";
 import { PageTransition } from "@/components/page-transition";
 
-export default function AllChambers() {
+export default function AllSpaces() {
   const [query, setQuery] = useState("");
-  const [createSpaceOpen, setCreateChamberOpen] = useState(false);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
   const navigate = useNavigate();
-  const { data: chambersData, isLoading } = useListSpaces(query);
-  const spaces = chambersData || [];
+  const { data: spacesData, isLoading } = useListSpaces(query);
+  const spaces = spacesData || [];
   return (
     <PageTransition className="max-w-[40rem] w-full md:mt-24 mt-16 space-y-4 mb-40 relative px-4 pb-20 md:pb-0">
       <button
@@ -52,7 +52,7 @@ export default function AllChambers() {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
-        <CreateSpaceButton onClick={() => setCreateChamberOpen(true)} />
+        <CreateSpaceButton onClick={() => setCreateSpaceOpen(true)} />
         <div>
           {isLoading ? (
             <SpaceListSkeleton count={4} />
@@ -67,7 +67,7 @@ export default function AllChambers() {
       </div>
       <CreateSpaceDialog
         open={createSpaceOpen}
-        onOpenChange={setCreateChamberOpen}
+        onOpenChange={setCreateSpaceOpen}
       />
     </PageTransition>
   );

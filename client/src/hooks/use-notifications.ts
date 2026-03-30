@@ -1,9 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from "./use-simple";
 import { listNotifications } from "@/api/notifications";
+
 export function useNotificationsQuery() {
     return useQuery({
         queryKey: ["notifications"],
         queryFn: listNotifications,
-        staleTime: 60 * 1000,
     });
 }

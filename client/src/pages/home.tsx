@@ -40,8 +40,8 @@ export default function Home() {
     useCreateQuestion();
   const [isValidating, setIsValidating] = useState(false);
   const { mutate: deleteQuestion } = useDeleteQuestion();
-  const { data: chambersData, isLoading } = useListSpaces();
-  const spaces = chambersData || [];
+  const { data: spacesData, isLoading } = useListSpaces();
+  const spaces = spacesData || [];
   const JOINED_SPACES = spaces.filter((c) => c.isJoined);
   const { data: questionsData, isLoading: isQuestionsLoading } =
     useQuestionsQuery(
@@ -69,7 +69,7 @@ export default function Home() {
         return;
       }
       submitQuestion(
-        { content, chamberUid: selectedSpace },
+        { content, spaceUid: selectedSpace },
         {
           onSuccess: () => {
             setContent("");
@@ -280,7 +280,7 @@ export default function Home() {
           <QuestionList
             questions={questions}
             onDelete={(id) => deleteQuestion(id)}
-            showChamberName
+            showSpaceName
           />
         ) : (
           <div className="text-center py-12 text-neutral-500">
