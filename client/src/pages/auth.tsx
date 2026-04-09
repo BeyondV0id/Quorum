@@ -7,17 +7,13 @@ import {
   useSignin,
   useSignup,
   useRequestPasswordReset,
-  useResendVerification,
 } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
+import { CLIENT_URL } from "@/config";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
 
-type AuthMode =
-  | "signin"
-  | "signup"
-  | "forgot"
-  | "signup-success"
-  | "forgot-success";
+type AuthMode = "signin" | "signup" | "forgot" | "forgot-success";
 
 type FormMode = "signin" | "signup" | "forgot";
 const HATCH = {
@@ -114,8 +110,6 @@ export default function Auth() {
     isPending: isResetPending,
     error: resetError,
   } = useRequestPasswordReset();
-  const { mutateAsync: resendVerification, isPending: isResendPending } =
-    useResendVerification();
 
 
 
@@ -126,23 +120,30 @@ export default function Auth() {
       password: form.password,
     };
 
-    if (formMode === "forgot") {
-      if (!payload.email) return;
-      await requestReset(payload.email);
-      setMode("forgot-success");
-      return;
-    }
+    try {
+      if (formMode === "forgot") {
+        if (!payload.email) return;
+        await requestReset(payload.email);
+        setMode("forgot-success");
+        return;
+      }
 
-    if (formMode === "signup") {
+      if (formMode === "signup") {
+        if (!payload.email || !payload.password) return;
+        await signUp(payload);
+        navigate("/home");
+        return;
+      }
+
       if (!payload.email || !payload.password) return;
-      await signUp(payload);
-      setMode("signup-success");
-      return;
+      await signIn(payload);
+      // Don't navigate manually — GuestRoute will redirect to /home
+      // once authClient.useSession() re-renders with the new session.
+      navigate("/home");
+    } catch {
+      // Error is already stored in the hook's error state and displayed in the UI.
+      // We just need to prevent unhandled rejection from breaking the form.
     }
-
-    if (!payload.email || !payload.password) return;
-    await signIn(payload);
-    navigate("/home");
   }
 
   // Google OAuth temporarily disabled
@@ -187,45 +188,6 @@ export default function Auth() {
     );
   }
 
-  if (mode === "signup-success") {
-    return (
-      <AuthSuccessCard
-        icon="✉️"
-        iconClassName="bg-green-100"
-        title="Check your email"
-        description={
-          <>
-            We've sent a verification link to <strong>{form.email}</strong>.
-            Please click the link to verify your account before signing in.
-          </>
-        }
-      >
-        <Button
-          variant="outline"
-          className="w-full mb-2"
-          onClick={() => setMode("signin")}
-        >
-          Back to Sign In
-        </Button>
-        <Button
-          variant="ghost"
-          className="w-full text-xs text-muted-foreground"
-          disabled={isResendPending}
-          onClick={async () => {
-            if (!form.email) return;
-            try {
-              await resendVerification(form.email);
-              alert("Verification email resent!");
-            } catch {
-              alert("Failed to resend email. Please try again.");
-            }
-          }}
-        >
-          {isResendPending ? "Sending..." : "Resend Validation Email"}
-        </Button>
-      </AuthSuccessCard>
-    );
-  }
 
   return (
     <div className="relative grid min-h-screen grid-cols-[1fr_2.5rem_auto_2.5rem_1fr] grid-rows-[1fr_1px_auto_1px_1fr] bg-background text-foreground">
@@ -295,6 +257,30 @@ export default function Auth() {
               )}
             </Button>
           </form>
+
+          <div className="mt-6">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase">
+                <span className="bg-card px-2 text-muted-foreground font-medium">Or continue with</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                authClient.signIn.social({ provider: "github", callbackURL: `${CLIENT_URL}/home` })
+              }
+              className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-xs font-medium text-card-foreground transition hover:bg-muted hover:opacity-90 active:scale-[0.98]"
+            >
+              <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+              </svg>
+              GitHub
+            </button>
+          </div>
 
           <div className="mt-4 space-y-3">
             {mode === "signin" && (

@@ -12,9 +12,17 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(401).json({ error: "unauthorized" });
     return;
   }
+
+  const username = (session.user as any).username as string;
+  if (!username) {
+    console.error(`User ${session.user.id} (${session.user.email}) has no username.`);
+    res.status(403).json({ error: "username is required to perform this action. Please set one in your profile." });
+    return;
+  }
+
   (req as AuthRequest).user = {
     id: session.user.id,
-    username: (session.user as any).username as string,
+    username,
   };
   next();
 }

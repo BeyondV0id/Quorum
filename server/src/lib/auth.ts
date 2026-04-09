@@ -3,10 +3,6 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
 
 import { db } from "../db/index.js";
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM = process.env.EMAIL_FROM ?? "Echo <noreply@yourdomain.com>";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -19,27 +15,8 @@ export const auth = betterAuth({
 
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }) => {
-      void resend.emails.send({
-        from: FROM,
-        to: user.email,
-        subject: "Reset your Echo password",
-        html: `<p>Hi ${user.name},</p><p>Click <a href="${url}">here</a> to reset your password. Link expires in 1 hour.</p>`,
-      });
-    },
-  },
-
-  emailVerification: {
-    sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      void resend.emails.send({
-        from: FROM,
-        to: user.email,
-        subject: "Verify your Echo account",
-        html: `<p>Hi ${user.name},</p><p>Click <a href="${url}">here</a> to verify your email. Link expires in 24 hours.</p>`,
-      });
-    },
+    requireEmailVerification: false,
+    autoSignIn: true,
   },
 
   socialProviders: {

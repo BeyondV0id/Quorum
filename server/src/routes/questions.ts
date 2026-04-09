@@ -88,7 +88,7 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
     )`);
   }
   const orderBy =
-    sort === "top" ? [desc(questions.upvotesCount)] :
+    sort === "votes" || sort === "top" ? [desc(questions.upvotesCount)] :
     sort === "pinned" ? [desc(questions.pinnedAt)] :
     [desc(questions.timeCreated)];
 
@@ -111,7 +111,10 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
   try {
     await db.insert(questions).values({ content, author: username!, spaceUid });
     res.status(201).json({ message: "question created" });
-  } catch { res.status(500).json({ error: "failed to create question" }); }
+  } catch (err) {
+    console.error("[POST /questions] DB error:", err);
+    res.status(500).json({ error: "failed to create question" });
+  }
 });
 
 // GET /questions/:uid

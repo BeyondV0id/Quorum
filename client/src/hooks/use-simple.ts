@@ -1,13 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 const listeners = new Map<string, Set<() => void>>();
 
 export const queryClient = {
   invalidateQueries: ({ queryKey }: { queryKey: any[] }) => {
-    const keyPrefix = queryKey[0];
-    const prefixStr = `["${keyPrefix}"`;
+    const targetKey = JSON.stringify(queryKey);
+    // Match queries whose key STARTS with the same prefix segments
+    // e.g. ["questions"] matches ["questions","votes","joined",null,null]
+    // We check by stringifying the prefix key and seeing if the stored key
+    // starts with that prefix (minus the closing bracket).
+    const prefix = targetKey.slice(0, -1); // remove trailing ]
     listeners.forEach((fns, key) => {
-      if (key.startsWith(prefixStr)) {
+      // exact match OR the stored key starts with our prefix followed by , or ]
+      if (key === targetKey || key.startsWith(prefix + ",") || key.startsWith(prefix + "]")) {
         fns.forEach((fn) => fn());
       }
     });
@@ -28,21 +33,33 @@ export function useQuery<T>(options: {
   const [isLoading, setIsLoading] = useState(options.enabled !== false);
   const [error, setError] = useState<Error | null>(null);
 
+  // Keep a ref to always use the latest queryFn without causing re-subscriptions
+  const queryFnRef = useRef(options.queryFn);
+  queryFnRef.current = options.queryFn;
+
+  const enabledRef = useRef(options.enabled);
+  enabledRef.current = options.enabled;
+
+  const keyStr = JSON.stringify(options.queryKey);
+
   const fetcher = useCallback(() => {
-    if (options.enabled === false) return;
+    if (enabledRef.current === false) return;
     setIsLoading(true);
     setError(null);
-    options
-      .queryFn()
+    queryFnRef
+      .current()
       .then((res) => setData(res))
       .catch((err) => setError(err))
       .finally(() => setIsLoading(false));
-  }, [JSON.stringify(options.queryKey), options.enabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyStr]);
 
   useEffect(() => {
-    fetcher();
+    // Re-fetch when enabled transitions from false → true
+    if (enabledRef.current !== false) {
+      fetcher();
+    }
 
-    const keyStr = JSON.stringify(options.queryKey);
     if (!listeners.has(keyStr)) {
       listeners.set(keyStr, new Set());
     }
@@ -50,8 +67,22 @@ export function useQuery<T>(options: {
 
     return () => {
       listeners.get(keyStr)?.delete(fetcher);
+      // Clean up empty sets
+      if (listeners.get(keyStr)?.size === 0) {
+        listeners.delete(keyStr);
+      }
     };
-  }, [fetcher, JSON.stringify(options.queryKey)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetcher, keyStr]);
+
+  // Re-fetch when enabled flips to true
+  const prevEnabled = useRef(options.enabled);
+  useEffect(() => {
+    if (prevEnabled.current === false && options.enabled !== false) {
+      fetcher();
+    }
+    prevEnabled.current = options.enabled;
+  }, [options.enabled, fetcher]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetcher };
 }
@@ -65,26 +96,33 @@ export function useMutation<TArgs, TRet>(options: {
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const mutate = async (
+  // Keep refs so mutate always uses latest callbacks without needing deps
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  const mutate = useCallback(async (
     args: TArgs,
     callOptions?: { onSuccess?: () => void; onSettled?: () => void },
   ) => {
     setIsPending(true);
     setError(null);
     try {
-      const data = await options.mutationFn(args);
-      if (options.onSuccess) await options.onSuccess(data, args);
+      const data = await optionsRef.current.mutationFn(args);
+      if (optionsRef.current.onSuccess) await optionsRef.current.onSuccess(data, args);
       if (callOptions?.onSuccess) callOptions.onSuccess();
-      if (options.onSettled) await options.onSettled(data, null, args);
+      if (optionsRef.current.onSettled) await optionsRef.current.onSettled(data, null, args);
       if (callOptions?.onSettled) callOptions.onSettled();
       return data;
     } catch (err) {
       setError(err as Error);
-      if (options.onError) await options.onError(err as Error, args);
-      if (options.onSettled) await options.onSettled(undefined, err as Error, args);
+      if (optionsRef.current.onError) await optionsRef.current.onError(err as Error, args);
+      if (optionsRef.current.onSettled) await optionsRef.current.onSettled(undefined, err as Error, args);
       if (callOptions?.onSettled) callOptions.onSettled();
+    } finally {
+      setIsPending(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { mutate, isPending, error };
 }

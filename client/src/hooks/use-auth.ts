@@ -52,11 +52,13 @@ export function useSignin() {
 
 export function useSignup() {
   return useAsyncMutation<AuthPayload, any>(async (payload) => {
+    const defaultUsername = payload.email.split("@")[0] || "user";
     return authClient.signUp.email({
       email: payload.email,
       password: payload.password,
-      name: payload.email.split("@")[0] || "User", // better-auth requires a name
-    });
+      name: defaultUsername,
+      username: defaultUsername,
+    } as any);
   });
 }
 
@@ -85,9 +87,8 @@ export function useResendVerification() {
 }
 
 export function useVerifyEmail() {
-  // handled automatically by better-auth usually, or via standard endpoint maps
-  return useAsyncMutation<void, any>(async () => {
-    return { data: null, error: null };
+  return useAsyncMutation<string, any>(async (token) => {
+    return authClient.verifyEmail({ query: { token } } as any);
   });
 }
 

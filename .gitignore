@@ -13,6 +13,7 @@ Thumbs.db
 
 # Node.js
 node_modules/
+void/
 dist/
 dist-ssr/
 build/
