@@ -4,7 +4,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
-import { answers, questions, answerUpvotes, notifications } from "../db/schema.js";
+import { answers, questions, answerUpvotes, notifications, user } from "../db/schema.js";
 
 const router = Router({ mergeParams: true });
 
@@ -38,12 +38,12 @@ function mapReply(r: any) {
 }
 
 // GET /questions/:uid/replies
-router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { username } = (req as AuthRequest).user;
-  const { uid } = req.params;
+router.get("/", async (req: Request, res: Response): Promise<void> => {
+  const username = (req as AuthRequest).user?.username;
+  const uid = req.params.uid as string;
   const rows = await db.query.answers.findMany({
     with: { authorUser: authorWith },
-    extras: replyExtras(username!, uid),
+    extras: replyExtras(username, uid),
     where: eq(answers.questionUid, uid),
     orderBy: [answers.timeCreated],
   });
@@ -53,20 +53,27 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 // POST /questions/:uid/replies
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { uid } = req.params;
+  const uid = req.params.uid as string;
   const { content } = req.body as { content: string };
+  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
+  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
   try {
-    const [answer] = await db.insert(answers).values({ content, questionUid: uid, author: username! }).returning();
-    const q = await db.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
-    const qAuthor = q?.author;
-    if (qAuthor && qAuthor !== username) {
-      await db.insert(notifications).values({
-        userUsername: qAuthor,
-        actorUsername: username!,
-        type: "reply_question",
-        referenceUid: answer.uid,
-      }).onConflictDoNothing();
-    }
+    const answer = await db.transaction(async (tx) => {
+      const [ans] = await tx.insert(answers).values({ content, questionUid: uid, author: username! }).returning();
+      if (!ans) throw new Error("failed to insert answer");
+      await tx.update(user).set({ answered: sql`${user.answered} + 1` }).where(eq(user.username, username!));
+      const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
+      const qAuthor = q?.author;
+      if (qAuthor && qAuthor !== username) {
+        await tx.insert(notifications).values({
+          userUsername: qAuthor,
+          actorUsername: username!,
+          type: "reply_question",
+          referenceUid: ans.uid,
+        }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });
+      }
+      return ans;
+    });
     res.status(201).json({ uid: answer.uid, content: answer.content, timeCreated: answer.timeCreated, questionUid: answer.questionUid, upvotes: 0, isUpvoted: false, authorUsername: answer.author, isAccepted: false });
   } catch { res.status(400).json({ error: "invalid question uid" }); }
 });
@@ -75,9 +82,12 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
 router.patch("/:ruid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const { content } = req.body as { content: string };
+  const ruid = req.params.ruid as string;
+  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
+  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
   try {
     await db.update(answers).set({ content })
-      .where(and(eq(answers.uid, req.params.ruid), eq(answers.author, username!)));
+      .where(and(eq(answers.uid, ruid), eq(answers.author, username!)));
     res.json({ message: "reply updated" });
   } catch { res.status(500).json({ error: "failed to update reply" }); }
 });
@@ -85,42 +95,49 @@ router.patch("/:ruid", requireAuth, async (req: Request, res: Response): Promise
 // DELETE /questions/:uid/replies/:ruid
 router.delete("/:ruid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { uid, ruid } = req.params;
-  await db.delete(answers).where(and(eq(answers.uid, ruid), eq(answers.questionUid, uid), eq(answers.author, username!)));
+  const { uid, ruid } = req.params as { uid: string, ruid: string };
+  await db.transaction(async (tx) => {
+    const [deleted] = await tx.delete(answers).where(and(eq(answers.uid, ruid), eq(answers.questionUid, uid), eq(answers.author, username!))).returning({ uid: answers.uid });
+    if (deleted) {
+      await tx.update(user).set({ answered: sql`${user.answered} - 1` }).where(eq(user.username, username!));
+    }
+  });
   res.json({ message: "reply deleted" });
 });
 
 // POST /questions/:uid/replies/:ruid/votes — toggle
 router.post("/:ruid/votes", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { ruid } = req.params;
-  const existing = await db.query.answerUpvotes.findFirst({
-    where: and(eq(answerUpvotes.username, username!), eq(answerUpvotes.answerUid, ruid)),
-  });
-  if (existing) {
-    await db.delete(answerUpvotes).where(and(eq(answerUpvotes.username, username!), eq(answerUpvotes.answerUid, ruid)));
-    await db.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} - 1` }).where(eq(answers.uid, ruid));
-  } else {
-    await db.insert(answerUpvotes).values({ username: username!, answerUid: ruid });
-    await db.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} + 1` }).where(eq(answers.uid, ruid));
-    const a = await db.query.answers.findFirst({ columns: { author: true }, where: eq(answers.uid, ruid) });
-    const author = a?.author;
+  const ruid = req.params.ruid as string;
+  await db.transaction(async (tx) => {
+    const existing = await tx.query.answerUpvotes.findFirst({
+      where: and(eq(answerUpvotes.username, username!), eq(answerUpvotes.answerUid, ruid)),
+    });
+    if (existing) {
+      await tx.delete(answerUpvotes).where(and(eq(answerUpvotes.username, username!), eq(answerUpvotes.answerUid, ruid)));
+      await tx.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} - 1` }).where(eq(answers.uid, ruid));
+    } else {
+      await tx.insert(answerUpvotes).values({ username: username!, answerUid: ruid });
+      await tx.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} + 1` }).where(eq(answers.uid, ruid));
+      const a = await tx.query.answers.findFirst({ columns: { author: true }, where: eq(answers.uid, ruid) });
+      const author = a?.author;
       if (author && author !== username) {
-        await db.insert(notifications).values({
+        await tx.insert(notifications).values({
           userUsername: author,
           actorUsername: username!,
           type: "upvote_reply",
           referenceUid: ruid,
-        }).onConflictDoNothing();
+        }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });
       }
-  }
+    }
+  });
   res.json({ message: "vote updated" });
 });
 
 // POST /questions/:uid/replies/:ruid/accept
 router.post("/:ruid/accept", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { uid, ruid } = req.params;
+  const { uid, ruid } = req.params as { uid: string, ruid: string };
   const q = await db.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
   if (q.author !== username) { res.status(403).json({ error: "unauthorized" }); return; }
@@ -131,7 +148,7 @@ router.post("/:ruid/accept", requireAuth, async (req: Request, res: Response): P
 // DELETE /questions/:uid/replies/:ruid/accept
 router.delete("/:ruid/accept", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { uid, ruid } = req.params;
+  const { uid, ruid } = req.params as { uid: string, ruid: string };
   const q = await db.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
   if (q.author !== username) { res.status(403).json({ error: "unauthorized" }); return; }

@@ -4,7 +4,7 @@ import { eq, ilike, and, sql, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
-import { questions, spaces, questionUpvotes, notifications, answers } from "../db/schema.js";
+import { questions, spaces, questionUpvotes, notifications, answers, user } from "../db/schema.js";
 
 const router = Router();
 
@@ -107,9 +107,14 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const { content, spaceUid } = req.body as { content: string; spaceUid: string };
+  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
+  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
   if (!spaceUid) { res.status(400).json({ error: "space uid is required" }); return; }
   try {
-    await db.insert(questions).values({ content, author: username!, spaceUid });
+    await db.transaction(async (tx) => {
+      await tx.insert(questions).values({ content, author: username!, spaceUid });
+      await tx.update(user).set({ posted: sql`${user.posted} + 1` }).where(eq(user.username, username!));
+    });
     res.status(201).json({ message: "question created" });
   } catch (err) {
     console.error("[POST /questions] DB error:", err);
@@ -120,10 +125,11 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
 // GET /questions/:uid
 router.get("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const row = await db.query.questions.findFirst({
     with: { space: spaceWith, authorUser: authorWith },
     extras: questionExtras(username!),
-    where: eq(questions.uid, req.params.uid),
+    where: eq(questions.uid, uid),
   });
   if (!row) { res.status(404).json({ error: "question not found" }); return; }
   res.json(mapQ(row));
@@ -132,10 +138,13 @@ router.get("/:uid", requireAuth, async (req: Request, res: Response): Promise<vo
 // PATCH /questions/:uid
 router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const { content } = req.body as { content: string };
+  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
+  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
   try {
     await db.update(questions).set({ content })
-      .where(and(eq(questions.uid, req.params.uid), eq(questions.author, username!)));
+      .where(and(eq(questions.uid, uid), eq(questions.author, username!)));
     res.json({ message: "question updated" });
   } catch { res.status(500).json({ error: "failed to update question" }); }
 });
@@ -143,71 +152,79 @@ router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<
 // DELETE /questions/:uid
 router.delete("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const q = await db.query.questions.findFirst({
     columns: { author: true },
-    where: eq(questions.uid, req.params.uid),
+    where: eq(questions.uid, uid),
   });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
   if (q.author !== username) { res.status(403).json({ error: "unauthorized" }); return; }
-  await db.delete(questions).where(eq(questions.uid, req.params.uid));
+  await db.transaction(async (tx) => {
+    await tx.delete(questions).where(eq(questions.uid, uid));
+    await tx.update(user).set({ posted: sql`${user.posted} - 1` }).where(eq(user.username, username!));
+  });
   res.json({ message: "question deleted" });
 });
 
 // POST /questions/:uid/votes — toggle
 router.post("/:uid/votes", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const uid = req.params.uid;
-  const existing = await db.query.questionUpvotes.findFirst({
-    where: and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)),
-  });
-  if (existing) {
-    await db.delete(questionUpvotes)
-      .where(and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)));
-    await db.update(questions)
-      .set({ upvotesCount: sql`${questions.upvotesCount} - 1` })
-      .where(eq(questions.uid, uid));
-  } else {
-    await db.insert(questionUpvotes).values({ username: username!, questionUid: uid });
-    await db.update(questions)
-      .set({ upvotesCount: sql`${questions.upvotesCount} + 1` })
-      .where(eq(questions.uid, uid));
-    const q = await db.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
-    if (q?.author && q.author !== username) {
-      const author = q.author;
-      await db.insert(notifications).values({
-          userUsername: author,
-          actorUsername: username!,
-          type: "upvote_question",
-          referenceUid: uid,
-        }).onConflictDoNothing();
+  const uid = req.params.uid as string;
+  await db.transaction(async (tx) => {
+    const existing = await tx.query.questionUpvotes.findFirst({
+      where: and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)),
+    });
+    if (existing) {
+      await tx.delete(questionUpvotes)
+        .where(and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)));
+      await tx.update(questions)
+        .set({ upvotesCount: sql`${questions.upvotesCount} - 1` })
+        .where(eq(questions.uid, uid));
+    } else {
+      await tx.insert(questionUpvotes).values({ username: username!, questionUid: uid });
+      await tx.update(questions)
+        .set({ upvotesCount: sql`${questions.upvotesCount} + 1` })
+        .where(eq(questions.uid, uid));
+      const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
+      if (q?.author && q.author !== username) {
+        const author = q.author;
+        await tx.insert(notifications).values({
+            userUsername: author,
+            actorUsername: username!,
+            type: "upvote_question",
+            referenceUid: uid,
+          }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });
+      }
     }
-  }
+  });
   res.json({ message: "vote updated" });
 });
 
 // POST /questions/:uid/pin
 router.post("/:uid/pin", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const q = await db.query.questions.findFirst({
     with: { space: { columns: { creatorUsername: true } } },
-    where: eq(questions.uid, req.params.uid),
+    where: eq(questions.uid, uid),
   });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
   if (q.space?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
-  await db.update(questions).set({ pinnedAt: new Date() }).where(eq(questions.uid, req.params.uid));
+  await db.update(questions).set({ pinnedAt: new Date() }).where(eq(questions.uid, uid));
   res.json({ message: "question pinned" });
 });
 
 // DELETE /questions/:uid/pin
 router.delete("/:uid/pin", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const q = await db.query.questions.findFirst({
     with: { space: { columns: { creatorUsername: true } } },
-    where: eq(questions.uid, req.params.uid),
+    where: eq(questions.uid, uid),
   });
   if (!q) { res.status(404).json({ error: "question not found" }); return; }
   if (q.space?.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
-  await db.update(questions).set({ pinnedAt: null }).where(eq(questions.uid, req.params.uid));
+  await db.update(questions).set({ pinnedAt: null }).where(eq(questions.uid, uid));
   res.json({ message: "question unpinned" });
 });
 

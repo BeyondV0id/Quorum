@@ -4,6 +4,7 @@ import type { AuthPayload } from "@/api/auth";
 
 export function useAuth() {
   const { data, isPending, error } = authClient.useSession();
+  
   return {
     data: data?.user ?? null,
     isPending,

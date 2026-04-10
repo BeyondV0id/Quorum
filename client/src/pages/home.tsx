@@ -86,7 +86,7 @@ export default function Home() {
     }
   };
   return (
-    <PageTransition className="max-w-[40rem] w-full md:mt-24 mt-16 space-y-4 mb-40 relative px-4 pb-20 md:pb-0">
+    <PageTransition className="max-w-[40rem] w-full md:mt-24 mt-16 space-y-4 mb-40 relative px-4 pb-20 md:pb-0 mx-auto">
       <PixelHeading
         as="h1"
         className="text-3xl text-foreground py-0 my-0"

@@ -46,3 +46,11 @@ export async function updateSpace(uid: string, space: Space): Promise<void> {
   });
   if (!res.ok) throw new Error("failed to update space");
 }
+
+export async function deleteSpace(uid: string): Promise<void> {
+  const res = await fetch(`${API_URL}/spaces/${uid}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("failed to delete space");
+}

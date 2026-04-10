@@ -129,7 +129,7 @@ router.get("/me/notifications", requireAuth, async (req: Request, res: Response)
 
 // GET /users/:username — public profile (last)
 router.get("/:username", async (req: Request, res: Response): Promise<void> => {
-  const { username } = req.params;
+  const username = req.params.username as string;
   const row = await db.query.user.findFirst({
     columns: authorColumns,
     where: eq(user.username!, username),

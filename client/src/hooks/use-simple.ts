@@ -102,20 +102,21 @@ export function useMutation<TArgs, TRet>(options: {
 
   const mutate = useCallback(async (
     args: TArgs,
-    callOptions?: { onSuccess?: () => void; onSettled?: () => void },
+    callOptions?: { onSuccess?: (data: TRet) => void; onError?: (error: Error) => void; onSettled?: () => void },
   ) => {
     setIsPending(true);
     setError(null);
     try {
       const data = await optionsRef.current.mutationFn(args);
       if (optionsRef.current.onSuccess) await optionsRef.current.onSuccess(data, args);
-      if (callOptions?.onSuccess) callOptions.onSuccess();
+      if (callOptions?.onSuccess) callOptions.onSuccess(data);
       if (optionsRef.current.onSettled) await optionsRef.current.onSettled(data, null, args);
       if (callOptions?.onSettled) callOptions.onSettled();
       return data;
     } catch (err) {
       setError(err as Error);
       if (optionsRef.current.onError) await optionsRef.current.onError(err as Error, args);
+      if (callOptions?.onError) callOptions.onError(err as Error);
       if (optionsRef.current.onSettled) await optionsRef.current.onSettled(undefined, err as Error, args);
       if (callOptions?.onSettled) callOptions.onSettled();
     } finally {

@@ -41,29 +41,31 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
   const { name, description, colorIndex } = req.body as { name: string; description?: string; colorIndex?: number };
   try {
     const [space] = await db.insert(spaces).values({ name, description, creatorUsername: username, colorIndex: colorIndex ?? 0 }).returning();
+    if (!space) throw new Error("space creation failed");
     await db.insert(spaceMembers).values({ spaceUid: space.uid, username: username! });
     res.status(201).json({ uid: space.uid, name: space.name, description: space.description, creatorUsername: space.creatorUsername, memberCount: 1, isJoined: true, colorIndex: space.colorIndex ?? 0, timeCreated: space.createdAt });
   } catch { res.status(500).json({ error: "failed to create space" }); }
 });
 
-// DELETE /spaces — body: { name }
-router.delete("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
+// DELETE /spaces/:uid
+router.delete("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { name } = req.body as { name: string };
-  await db.delete(spaces).where(and(eq(spaces.name, name), eq(spaces.creatorUsername!, username!)));
+  const uid = req.params.uid as string;
+  await db.delete(spaces).where(and(eq(spaces.uid, uid), eq(spaces.creatorUsername, username!)));
   res.json({ message: "space deleted" });
 });
 
 // PATCH /spaces/:uid
 router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   const { name, description, colorIndex } = req.body as { name?: string; description?: string; colorIndex?: number };
   if (!name || !description) { res.status(400).json({ error: "name and description are required" }); return; }
   try {
-    const c = await db.query.spaces.findFirst({ columns: { creatorUsername: true }, where: eq(spaces.uid, req.params.uid) });
+    const c = await db.query.spaces.findFirst({ columns: { creatorUsername: true }, where: eq(spaces.uid, uid) });
     if (!c) { res.status(404).json({ error: "space not found" }); return; }
     if (c.creatorUsername !== username) { res.status(403).json({ error: "unauthorized" }); return; }
-    await db.update(spaces).set({ name, description, colorIndex: colorIndex ?? 0 }).where(eq(spaces.uid, req.params.uid));
+    await db.update(spaces).set({ name, description, colorIndex: colorIndex ?? 0 }).where(eq(spaces.uid, uid));
     res.json({ message: "space updated" });
   } catch (err: any) {
     if (err?.code === "23505") { res.status(409).json({ error: "space name already exists" }); return; }
@@ -74,8 +76,9 @@ router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<
 // POST /spaces/:uid/join
 router.post("/:uid/join", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
+  const uid = req.params.uid as string;
   try {
-    await db.insert(spaceMembers).values({ spaceUid: req.params.uid, username: username! }).onConflictDoNothing();
+    await db.insert(spaceMembers).values({ spaceUid: uid, username: username! }).onConflictDoNothing();
     res.json({ message: "joined space" });
   } catch { res.status(400).json({ error: "invalid uid" }); }
 });
@@ -83,7 +86,8 @@ router.post("/:uid/join", requireAuth, async (req: Request, res: Response): Prom
 // POST /spaces/:uid/leave
 router.post("/:uid/leave", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  await db.delete(spaceMembers).where(and(eq(spaceMembers.spaceUid, req.params.uid), eq(spaceMembers.username, username!)));
+  const uid = req.params.uid as string;
+  await db.delete(spaceMembers).where(and(eq(spaceMembers.spaceUid, uid), eq(spaceMembers.username, username!)));
   res.json({ message: "left space" });
 });
 
