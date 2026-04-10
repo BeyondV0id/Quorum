@@ -5,6 +5,14 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { user, questions, notifications } from "../db/schema.js";
+import { z } from "zod";
+
+const updateUserSchema = z.object({
+  username: z.string().regex(/^[^\s]+$/, "username cannot contain spaces").optional(),
+  bio: z.string().max(500, "bio too long").optional(),
+  avatar: z.string().optional(),
+  link: z.string().optional(),
+});
 
 const router = Router();
 
@@ -54,8 +62,14 @@ router.get("/me", requireAuth, async (req: Request, res: Response): Promise<void
 // PATCH /users/me
 router.patch("/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { id, username: currentUsername } = (req as AuthRequest).user;
-  const { username: newUsername, bio, avatar, link } = req.body as { username?: string; bio?: string; avatar?: string; link?: string };
-  if (newUsername?.includes(" ")) { res.status(400).json({ error: "username cannot contain spaces" }); return; }
+  
+  const parsed = updateUserSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { username: newUsername, bio, avatar, link } = parsed.data;
+
   try {
     if (newUsername && newUsername !== currentUsername) {
       const existing = await db.query.user.findFirst({ columns: { id: true }, where: eq(user.username!, newUsername) });

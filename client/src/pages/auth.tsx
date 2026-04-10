@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AuthPayload } from "@/api/auth";
@@ -9,9 +9,15 @@ import {
   useRequestPasswordReset,
 } from "@/hooks/use-auth";
 import { authClient } from "@/lib/auth-client";
-import { CLIENT_URL } from "@/config";
+
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert02Icon, Loading03Icon } from "@hugeicons/core-free-icons";
+import { z } from "zod";
+
+const authSchema = z.object({
+  email: z.string().email("Please enter a valid email address").refine(e => e.endsWith("@gmail.com"), "Only Gmail accounts are currently supported"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
 
 type AuthMode = "signin" | "signup" | "forgot" | "forgot-success";
 
@@ -80,7 +86,7 @@ function AuthSuccessCard({
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("signup");
-  const navigate = useNavigate();
+
   const [form, setForm] = useState<AuthPayload>({
     email: "",
     password: "",
@@ -121,6 +127,19 @@ export default function Auth() {
     };
 
     try {
+      if (formMode !== "forgot") {
+        authSchema.parse(payload);
+      } else {
+        z.string().email("Please enter a valid email").refine(e => e.endsWith("@gmail.com"), "Only Gmail accounts are currently supported").parse(payload.email);
+      }
+    } catch (err: any) {
+      if (err instanceof z.ZodError) {
+        alert(err.issues[0].message);
+        return;
+      }
+    }
+
+    try {
       if (formMode === "forgot") {
         if (!payload.email) return;
         await requestReset(payload.email);
@@ -131,15 +150,12 @@ export default function Auth() {
       if (formMode === "signup") {
         if (!payload.email || !payload.password) return;
         await signUp(payload);
-        navigate("/home");
         return;
       }
 
       if (!payload.email || !payload.password) return;
       await signIn(payload);
-      // Don't navigate manually — GuestRoute will redirect to /home
-      // once authClient.useSession() re-renders with the new session.
-      navigate("/home");
+      // GuestRoute will redirect to /home automatically when session updates.
     } catch {
       // Error is already stored in the hook's error state and displayed in the UI.
       // We just need to prevent unhandled rejection from breaking the form.
@@ -271,7 +287,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={() =>
-                authClient.signIn.social({ provider: "github", callbackURL: `${CLIENT_URL}/home` })
+                authClient.signIn.social({ provider: "github", callbackURL: "/home" })
               }
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-xs font-medium text-card-foreground transition hover:bg-muted hover:opacity-90 active:scale-[0.98]"
             >

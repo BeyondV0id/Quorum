@@ -5,6 +5,12 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { questions, spaces, questionUpvotes, notifications, answers, user } from "../db/schema.js";
+import { z } from "zod";
+
+const questionSchema = z.object({
+  content: z.string().trim().min(1, "content is required").max(5000, "content too long"),
+  spaceUid: z.string().min(1, "space uid is required").optional(),
+});
 
 const router = Router();
 
@@ -106,10 +112,15 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 // POST /questions
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { content, spaceUid } = req.body as { content: string; spaceUid: string };
-  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
-  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
+  
+  const parsed = questionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { content, spaceUid } = parsed.data;
   if (!spaceUid) { res.status(400).json({ error: "space uid is required" }); return; }
+  
   try {
     await db.transaction(async (tx) => {
       await tx.insert(questions).values({ content, author: username!, spaceUid });
@@ -139,9 +150,14 @@ router.get("/:uid", requireAuth, async (req: Request, res: Response): Promise<vo
 router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const uid = req.params.uid as string;
-  const { content } = req.body as { content: string };
-  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
-  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
+  
+  const parsed = questionSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { content } = parsed.data;
+  
   try {
     await db.update(questions).set({ content })
       .where(and(eq(questions.uid, uid), eq(questions.author, username!)));

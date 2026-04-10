@@ -5,6 +5,11 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { answers, questions, answerUpvotes, notifications, user } from "../db/schema.js";
+import { z } from "zod";
+
+const replySchema = z.object({
+  content: z.string().trim().min(1, "content is required").max(5000, "content too long"),
+});
 
 const router = Router({ mergeParams: true });
 
@@ -54,9 +59,14 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const uid = req.params.uid as string;
-  const { content } = req.body as { content: string };
-  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
-  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
+  
+  const parsed = replySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { content } = parsed.data;
+
   try {
     const answer = await db.transaction(async (tx) => {
       const [ans] = await tx.insert(answers).values({ content, questionUid: uid, author: username! }).returning();
@@ -81,10 +91,15 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
 // PATCH /questions/:uid/replies/:ruid
 router.patch("/:ruid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { content } = req.body as { content: string };
   const ruid = req.params.ruid as string;
-  if (!content?.trim()) { res.status(400).json({ error: "content is required" }); return; }
-  if (content.length > 5000) { res.status(400).json({ error: "content too long" }); return; }
+  
+  const parsed = replySchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { content } = parsed.data;
+
   try {
     await db.update(answers).set({ content })
       .where(and(eq(answers.uid, ruid), eq(answers.author, username!)));

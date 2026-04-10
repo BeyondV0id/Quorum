@@ -55,11 +55,14 @@ export function useSignin() {
 
 export function useSignup() {
   return useAsyncMutation<AuthPayload, any>(async (payload) => {
-    const defaultUsername = payload.email.split("@")[0] || "user";
+    const baseUsername = payload.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") || "user";
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const defaultUsername = `${baseUsername}_${randomSuffix}`;
+    
     return authClient.signUp.email({
       email: payload.email,
       password: payload.password,
-      name: defaultUsername,
+      name: baseUsername,
       username: defaultUsername,
     } as any);
   });
