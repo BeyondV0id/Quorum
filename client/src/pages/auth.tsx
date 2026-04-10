@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +87,7 @@ function AuthSuccessCard({
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("signup");
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<AuthPayload>({
     email: "",
@@ -150,12 +152,13 @@ export default function Auth() {
       if (formMode === "signup") {
         if (!payload.email || !payload.password) return;
         await signUp(payload);
+        navigate("/home");
         return;
       }
 
       if (!payload.email || !payload.password) return;
       await signIn(payload);
-      // GuestRoute will redirect to /home automatically when session updates.
+      navigate("/home");
     } catch {
       // Error is already stored in the hook's error state and displayed in the UI.
       // We just need to prevent unhandled rejection from breaking the form.
