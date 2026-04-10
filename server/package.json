@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
+    "start": "tsx src/index.ts",
     "auth:generate": "npx @better-auth/cli@latest generate --output src/db/schema.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -22,7 +23,8 @@
     "express": "^5.2.1",
     "pg": "^8.20.0",
     "postgres": "^3.4.8",
-    "resend": "^6.9.4"
+    "resend": "^6.9.4",
+    "tsx": "^4.21.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -32,7 +34,6 @@
     "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
     "typescript": "^6.0.2"
   }
 }
