@@ -5,6 +5,13 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { spaces, spaceMembers } from "../db/schema.js";
+import { z } from "zod";
+
+const spaceSchema = z.object({
+  name: z.string().trim().min(1, "name is required").max(100, "name too long"),
+  description: z.string().trim().max(500, "description too long").optional(),
+  colorIndex: z.number().int().min(0).max(10).optional(),
+});
 
 const router = Router();
 
@@ -38,7 +45,14 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 // POST /spaces
 router.post("/", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const { name, description, colorIndex } = req.body as { name: string; description?: string; colorIndex?: number };
+  
+  const parsed = spaceSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "Invalid input" });
+    return;
+  }
+  const { name, description, colorIndex } = parsed.data;
+
   try {
     const [space] = await db.insert(spaces).values({ name, description, creatorUsername: username, colorIndex: colorIndex ?? 0 }).returning();
     if (!space) throw new Error("space creation failed");
@@ -59,8 +73,14 @@ router.delete("/:uid", requireAuth, async (req: Request, res: Response): Promise
 router.patch("/:uid", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
   const uid = req.params.uid as string;
-  const { name, description, colorIndex } = req.body as { name?: string; description?: string; colorIndex?: number };
-  if (!name || !description) { res.status(400).json({ error: "name and description are required" }); return; }
+  
+  const parsed = spaceSchema.safeParse(req.body);
+  if (!parsed.success || !parsed.data.name || !parsed.data.description) {
+    res.status(400).json({ error: parsed.error?.issues?.[0]?.message || "name and description are required" });
+    return;
+  }
+  const { name, description, colorIndex } = parsed.data;
+
   try {
     const c = await db.query.spaces.findFirst({ columns: { creatorUsername: true }, where: eq(spaces.uid, uid) });
     if (!c) { res.status(404).json({ error: "space not found" }); return; }
