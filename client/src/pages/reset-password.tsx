@@ -21,7 +21,7 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const { mutate: resetPassword, isPending, error } = useResetPassword();
+  const { mutateAsync: resetPassword, isPending, error } = useResetPassword();
 
   useEffect(() => {
     if (!token) {
@@ -29,7 +29,7 @@ export default function ResetPassword() {
     }
   }, [token, navigate]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match");
@@ -37,12 +37,12 @@ export default function ResetPassword() {
     }
     if (!token) return;
 
-    resetPassword(
-      { token, newPassword },
-      {
-        onSuccess: () => setSuccess(true),
-      },
-    );
+    try {
+      await resetPassword({ token, newPassword });
+      setSuccess(true);
+    } catch (err) {
+      // hook error handles state
+    }
   }
 
   if (success) {

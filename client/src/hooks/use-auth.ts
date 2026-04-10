@@ -2,11 +2,13 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import type { AuthPayload } from "@/api/auth";
 
+import type { AuthUser } from "@/lib/auth-client";
+
 export function useAuth() {
   const { data, isPending, error } = authClient.useSession();
   
   return {
-    data: data?.user ?? null,
+    data: (data?.user as AuthUser) ?? null,
     isPending,
     isLoading: isPending,
     isSuccess: !!data?.session,
@@ -95,7 +97,7 @@ export function useVerifyEmail() {
 
 export function useRequestPasswordReset() {
   return useAsyncMutation<string, any>(async (email) => {
-    return authClient.forgetPassword({ email });
+    return (authClient as any).forgetPassword({ email });
   });
 }
 

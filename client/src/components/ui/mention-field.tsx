@@ -42,7 +42,7 @@ export function MentionField({
   const mentionKey = mentionContext
     ? `${mentionContext.start}:${mentionContext.end}:${query}`
     : null;
-  const { data: suggestions = [], isFetching } = useMentionUsers(query);
+  const { data: suggestions = [], isLoading: isFetching } = useMentionUsers(query);
   const isOpen =
     mentionKey !== null &&
     dismissedMentionKey !== mentionKey &&

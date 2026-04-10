@@ -70,11 +70,11 @@ export default function Explore() {
   const isSearchMode = query.length > 0;
   const isLoading = isSearchMode ? isSearching : isTrendingLoading;
   const {
-    users,
-    spaces: searchSpaces,
-    questions: searchQuestions,
-    replies,
-  } = searchResults;
+    users = [],
+    spaces: searchSpaces = [],
+    questions: searchQuestions = [],
+    replies = [],
+  } = searchResults || {};
   const hasSearchResults =
     users.length > 0 ||
     searchSpaces.length > 0 ||
@@ -113,7 +113,7 @@ export default function Explore() {
                     Users
                   </h3>
                   <div className="flex flex-col gap-2">
-                    {users.map((user) => (
+                    {users.map((user: any) => (
                       <div
                         key={user.username}
                         onClick={() => navigate(`/u/${user.username}`)}
@@ -164,7 +164,7 @@ export default function Explore() {
                     Replies
                   </h3>
                   <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 divide-y divide-neutral-100 dark:divide-neutral-800 overflow-hidden">
-                    {replies.map((reply) => (
+                    {replies.map((reply: any) => (
                       <ReplyResult key={reply.answer.uid} item={reply} />
                     ))}
                   </div>

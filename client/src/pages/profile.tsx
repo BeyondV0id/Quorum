@@ -70,7 +70,7 @@ export default function Profile() {
   } = useUserQuestionsQuery();
   const questions = qnData || [];
   const { mutate: deleteQuestion } = useDeleteQuestion();
-  const { mutate: deleteAccount } = useDeleteAccount();
+  const { mutateAsync: deleteAccount } = useDeleteAccount();
   const { mutate: signout } = useSignout();
   const { setTheme } = useTheme();
   const [editForm, setEditForm] = useState<User>({
@@ -458,16 +458,14 @@ export default function Profile() {
               </Button>
               <Button
                 variant="destructive"
-                onClick={() => {
-                  deleteAccount(undefined, {
-                    onSuccess: () => {
-                      toast.success("Account deleted successfully");
-                      setIsDeleteOpen(false);
-                    },
-                    onError: () => {
-                      toast.error("Failed to delete account");
-                    },
-                  });
+                onClick={async () => {
+                  try {
+                    await deleteAccount(undefined);
+                    toast.success("Account deleted successfully");
+                    setIsDeleteOpen(false);
+                  } catch (err) {
+                    toast.error("Failed to delete account");
+                  }
                 }}
               >
                 Delete Account
