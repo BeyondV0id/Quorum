@@ -15,7 +15,7 @@ const PORT = process.env.PORT ?? 3001;
 // CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL ?? "http://localhost:5173",
+    origin: (process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, ""),
     credentials: true,
   })
 );
