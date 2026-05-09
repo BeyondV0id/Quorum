@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { eq, ilike, and, sql } from "drizzle-orm";
+import { eq, ilike, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
@@ -15,18 +15,11 @@ const spaceSchema = z.object({
 
 const router = Router();
 
-function spaceExtras(username: string) {
-  return {
-    memberCount: sql<number>`(SELECT COUNT(*) FROM space_members WHERE space_uid = spaces.uid)`.as("member_count"),
-    isJoined: sql<boolean>`EXISTS(SELECT 1 FROM space_members WHERE space_uid = spaces.uid AND username = ${username})`.as("is_joined"),
-  };
-}
-
-function mapSpace(r: any) {
+function mapSpace(r: any, memberCount: number, isJoined: boolean) {
   return {
     uid: r.uid, name: r.name, description: r.description,
-    creatorUsername: r.creatorUsername, memberCount: r.memberCount ?? 0,
-    isJoined: r.isJoined, colorIndex: r.colorIndex ?? 0, timeCreated: r.createdAt,
+    creatorUsername: r.creatorUsername, memberCount,
+    isJoined, colorIndex: r.colorIndex ?? 0, timeCreated: r.createdAt,
   };
 }
 
@@ -35,11 +28,23 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
   const { username } = (req as AuthRequest).user;
   const q = (req.query.q as string) ?? "";
   const rows = await db.query.spaces.findMany({
-    extras: spaceExtras(username!),
     where: q ? ilike(spaces.name, `%${q}%`) : undefined,
     orderBy: [spaces.name],
   });
-  res.json(rows.map(mapSpace));
+  const ids = rows.map((r) => r.uid);
+  const members = ids.length
+    ? await db.query.spaceMembers.findMany({
+        columns: { spaceUid: true, username: true },
+        where: inArray(spaceMembers.spaceUid, ids),
+      })
+    : [];
+  const countMap = new Map<string, number>();
+  const joinedSet = new Set<string>();
+  for (const m of members) {
+    countMap.set(m.spaceUid, (countMap.get(m.spaceUid) ?? 0) + 1);
+    if (m.username === username) joinedSet.add(m.spaceUid);
+  }
+  res.json(rows.map((r) => mapSpace(r, countMap.get(r.uid) ?? 0, joinedSet.has(r.uid))));
 });
 
 // POST /spaces

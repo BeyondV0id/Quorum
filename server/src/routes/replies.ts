@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
@@ -17,22 +17,11 @@ const authorWith = {
   columns: { username: true, bio: true, avatar: true, links: true, posted: true, answered: true },
 } as const;
 
-function replyExtras(username: string, questionUid: string) {
-  return {
-    isUpvoted: sql<boolean>`EXISTS(
-      SELECT 1 FROM answer_upvotes au WHERE au.username = ${username} AND au.answer_uid = answers.uid
-    )`.as("is_upvoted"),
-    isAccepted: sql<boolean>`EXISTS(
-      SELECT 1 FROM questions WHERE uid = ${questionUid}::uuid AND accepted_answer_uid = answers.uid
-    )`.as("is_accepted"),
-  };
-}
-
-function mapReply(r: any) {
+function mapReply(r: any, isUpvoted: boolean, isAccepted: boolean) {
   return {
     answer: {
       uid: r.uid, content: r.content, timeCreated: r.timeCreated, questionUid: r.questionUid,
-      upvotes: r.upvotesCount ?? 0, isUpvoted: r.isUpvoted, authorUsername: r.author, isAccepted: r.isAccepted,
+      upvotes: r.upvotesCount ?? 0, isUpvoted, authorUsername: r.author, isAccepted,
     },
     author: {
       username: r.authorUser?.username ?? r.author,
@@ -48,11 +37,27 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
   const uid = req.params.uid as string;
   const rows = await db.query.answers.findMany({
     with: { authorUser: authorWith },
-    extras: replyExtras(username, uid),
     where: eq(answers.questionUid, uid),
     orderBy: [answers.timeCreated],
   });
-  res.json(rows.map(mapReply));
+
+  const answerIds = rows.map((r) => r.uid);
+  const [question, userVotes] = await Promise.all([
+    db.query.questions.findFirst({
+      columns: { acceptedAnswerUid: true },
+      where: eq(questions.uid, uid),
+    }),
+    username && answerIds.length
+      ? db.query.answerUpvotes.findMany({
+          columns: { answerUid: true },
+          where: and(eq(answerUpvotes.username, username), inArray(answerUpvotes.answerUid, answerIds)),
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const upvotedSet = new Set(userVotes.map((v) => v.answerUid));
+  const acceptedUid = question?.acceptedAnswerUid ?? null;
+  res.json(rows.map((r) => mapReply(r, upvotedSet.has(r.uid), acceptedUid === r.uid)));
 });
 
 // POST /questions/:uid/replies
@@ -71,7 +76,14 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
     const answer = await db.transaction(async (tx) => {
       const [ans] = await tx.insert(answers).values({ content, questionUid: uid, author: username! }).returning();
       if (!ans) throw new Error("failed to insert answer");
-      await tx.update(user).set({ answered: sql`${user.answered} + 1` }).where(eq(user.username, username!));
+      const current = await tx.query.user.findFirst({
+        columns: { answered: true },
+        where: eq(user.username, username!),
+      });
+      await tx
+        .update(user)
+        .set({ answered: (current?.answered ?? 0) + 1 })
+        .where(eq(user.username, username!));
       const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
       const qAuthor = q?.author;
       if (qAuthor && qAuthor !== username) {
@@ -114,7 +126,14 @@ router.delete("/:ruid", requireAuth, async (req: Request, res: Response): Promis
   await db.transaction(async (tx) => {
     const [deleted] = await tx.delete(answers).where(and(eq(answers.uid, ruid), eq(answers.questionUid, uid), eq(answers.author, username!))).returning({ uid: answers.uid });
     if (deleted) {
-      await tx.update(user).set({ answered: sql`${user.answered} - 1` }).where(eq(user.username, username!));
+      const current = await tx.query.user.findFirst({
+        columns: { answered: true },
+        where: eq(user.username, username!),
+      });
+      await tx
+        .update(user)
+        .set({ answered: Math.max((current?.answered ?? 0) - 1, 0) })
+        .where(eq(user.username, username!));
     }
   });
   res.json({ message: "reply deleted" });
@@ -130,10 +149,24 @@ router.post("/:ruid/votes", requireAuth, async (req: Request, res: Response): Pr
     });
     if (existing) {
       await tx.delete(answerUpvotes).where(and(eq(answerUpvotes.username, username!), eq(answerUpvotes.answerUid, ruid)));
-      await tx.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} - 1` }).where(eq(answers.uid, ruid));
+      const current = await tx.query.answers.findFirst({
+        columns: { upvotesCount: true },
+        where: eq(answers.uid, ruid),
+      });
+      await tx
+        .update(answers)
+        .set({ upvotesCount: Math.max((current?.upvotesCount ?? 0) - 1, 0) })
+        .where(eq(answers.uid, ruid));
     } else {
       await tx.insert(answerUpvotes).values({ username: username!, answerUid: ruid });
-      await tx.update(answers).set({ upvotesCount: sql`${answers.upvotesCount} + 1` }).where(eq(answers.uid, ruid));
+      const current = await tx.query.answers.findFirst({
+        columns: { upvotesCount: true },
+        where: eq(answers.uid, ruid),
+      });
+      await tx
+        .update(answers)
+        .set({ upvotesCount: (current?.upvotesCount ?? 0) + 1 })
+        .where(eq(answers.uid, ruid));
       const a = await tx.query.answers.findFirst({ columns: { author: true }, where: eq(answers.uid, ruid) });
       const author = a?.author;
       if (author && author !== username) {

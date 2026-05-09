@@ -1,10 +1,10 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { eq, ilike, and, sql, desc } from "drizzle-orm";
+import { eq, ilike, and, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
-import { questions, spaces, questionUpvotes, notifications, answers, user } from "../db/schema.js";
+import { questions, spaces, spaceMembers, questionUpvotes, notifications, answers, user } from "../db/schema.js";
 import { z } from "zod";
 
 const questionSchema = z.object({
@@ -29,22 +29,14 @@ const spaceWith = {
   columns: { uid: true, name: true },
 } as const;
 
-function questionExtras(username: string) {
-  return {
-    isUpvoted: sql<boolean>`EXISTS(
-      SELECT 1 FROM question_upvotes qu WHERE qu.username = ${username} AND qu.question_uid = questions.uid
-    )`.as("is_upvoted"),
-  };
-}
-
-function mapQ(r: any) {
+function mapQ(r: any, isUpvoted: boolean) {
   return {
     question: {
       uid: r.uid,
       content: r.content,
       timeCreated: r.timeCreated,
       upvotes: r.upvotesCount ?? 0,
-      isUpvoted: r.isUpvoted,
+      isUpvoted,
       authorUsername: r.author,
       spaceUid: r.space?.uid,
       spaceName: r.space?.name,
@@ -62,6 +54,17 @@ function mapQ(r: any) {
   };
 }
 
+async function withQuestionUpvotes<T extends { uid: string }>(rows: T[], username: string) {
+  if (!rows.length) return rows.map((r) => ({ row: r, isUpvoted: false }));
+  const ids = rows.map((r) => r.uid);
+  const upvotes = await db.query.questionUpvotes.findMany({
+    columns: { questionUid: true },
+    where: and(eq(questionUpvotes.username, username), inArray(questionUpvotes.questionUid, ids)),
+  });
+  const upvotedSet = new Set(upvotes.map((u) => u.questionUid));
+  return rows.map((row) => ({ row, isUpvoted: upvotedSet.has(row.uid) }));
+}
+
 // GET /questions/search  (before /:uid)
 router.get("/search", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
@@ -70,13 +73,13 @@ router.get("/search", requireAuth, async (req: Request, res: Response): Promise<
   if (!q) { res.json([]); return; }
   const rows = await db.query.questions.findMany({
     with: { space: spaceWith, authorUser: authorWith },
-    extras: questionExtras(username!),
     where: ilike(questions.content!, `%${q}%`),
     orderBy: [desc(questions.timeCreated)],
     limit,
     offset,
   });
-  res.json(rows.map(mapQ));
+  const enriched = await withQuestionUpvotes(rows, username!);
+  res.json(enriched.map(({ row, isUpvoted }) => mapQ(row, isUpvoted)));
 });
 
 // GET /questions
@@ -89,9 +92,16 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
   if (space_uid) conditions.push(eq(questions.spaceUid, space_uid));
   if (author) conditions.push(eq(questions.author, author));
   if (filter === "joined") {
-    conditions.push(sql`EXISTS(
-      SELECT 1 FROM space_members cm WHERE cm.space_uid = questions.space_uid AND cm.username = ${username}
-    )`);
+    const memberships = await db.query.spaceMembers.findMany({
+      columns: { spaceUid: true },
+      where: eq(spaceMembers.username, username!),
+    });
+    const joinedSpaceIds = memberships.map((m) => m.spaceUid);
+    if (!joinedSpaceIds.length) {
+      res.json([]);
+      return;
+    }
+    conditions.push(inArray(questions.spaceUid, joinedSpaceIds));
   }
   const orderBy =
     sort === "votes" || sort === "top" ? [desc(questions.upvotesCount)] :
@@ -100,13 +110,13 @@ router.get("/", requireAuth, async (req: Request, res: Response): Promise<void> 
 
   const rows = await db.query.questions.findMany({
     with: { space: spaceWith, authorUser: authorWith },
-    extras: questionExtras(username!),
     where: conditions.length ? and(...conditions) : undefined,
     orderBy,
     limit,
     offset,
   });
-  res.json(rows.map(mapQ));
+  const enriched = await withQuestionUpvotes(rows, username!);
+  res.json(enriched.map(({ row, isUpvoted }) => mapQ(row, isUpvoted)));
 });
 
 // POST /questions
@@ -124,7 +134,14 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
   try {
     await db.transaction(async (tx) => {
       await tx.insert(questions).values({ content, author: username!, spaceUid });
-      await tx.update(user).set({ posted: sql`${user.posted} + 1` }).where(eq(user.username, username!));
+      const current = await tx.query.user.findFirst({
+        columns: { posted: true },
+        where: eq(user.username, username!),
+      });
+      await tx
+        .update(user)
+        .set({ posted: (current?.posted ?? 0) + 1 })
+        .where(eq(user.username, username!));
     });
     res.status(201).json({ message: "question created" });
   } catch (err) {
@@ -139,11 +156,14 @@ router.get("/:uid", requireAuth, async (req: Request, res: Response): Promise<vo
   const uid = req.params.uid as string;
   const row = await db.query.questions.findFirst({
     with: { space: spaceWith, authorUser: authorWith },
-    extras: questionExtras(username!),
     where: eq(questions.uid, uid),
   });
   if (!row) { res.status(404).json({ error: "question not found" }); return; }
-  res.json(mapQ(row));
+  const upvote = await db.query.questionUpvotes.findFirst({
+    columns: { questionUid: true },
+    where: and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)),
+  });
+  res.json(mapQ(row, !!upvote));
 });
 
 // PATCH /questions/:uid
@@ -177,7 +197,14 @@ router.delete("/:uid", requireAuth, async (req: Request, res: Response): Promise
   if (q.author !== username) { res.status(403).json({ error: "unauthorized" }); return; }
   await db.transaction(async (tx) => {
     await tx.delete(questions).where(eq(questions.uid, uid));
-    await tx.update(user).set({ posted: sql`${user.posted} - 1` }).where(eq(user.username, username!));
+    const current = await tx.query.user.findFirst({
+      columns: { posted: true },
+      where: eq(user.username, username!),
+    });
+    await tx
+      .update(user)
+      .set({ posted: Math.max((current?.posted ?? 0) - 1, 0) })
+      .where(eq(user.username, username!));
   });
   res.json({ message: "question deleted" });
 });
@@ -193,13 +220,21 @@ router.post("/:uid/votes", requireAuth, async (req: Request, res: Response): Pro
     if (existing) {
       await tx.delete(questionUpvotes)
         .where(and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)));
+      const current = await tx.query.questions.findFirst({
+        columns: { upvotesCount: true },
+        where: eq(questions.uid, uid),
+      });
       await tx.update(questions)
-        .set({ upvotesCount: sql`${questions.upvotesCount} - 1` })
+        .set({ upvotesCount: Math.max((current?.upvotesCount ?? 0) - 1, 0) })
         .where(eq(questions.uid, uid));
     } else {
       await tx.insert(questionUpvotes).values({ username: username!, questionUid: uid });
+      const current = await tx.query.questions.findFirst({
+        columns: { upvotesCount: true },
+        where: eq(questions.uid, uid),
+      });
       await tx.update(questions)
-        .set({ upvotesCount: sql`${questions.upvotesCount} + 1` })
+        .set({ upvotesCount: (current?.upvotesCount ?? 0) + 1 })
         .where(eq(questions.uid, uid));
       const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
       if (q?.author && q.author !== username) {

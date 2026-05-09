@@ -1,10 +1,10 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { eq, ilike, inArray, sql, desc } from "drizzle-orm";
+import { eq, ilike, inArray, and, desc } from "drizzle-orm";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
-import { user, questions, notifications } from "../db/schema.js";
+import { user, questions, questionUpvotes, notifications } from "../db/schema.js";
 import { z } from "zod";
 
 const updateUserSchema = z.object({
@@ -102,17 +102,19 @@ router.get("/me/questions", requireAuth, async (req: Request, res: Response): Pr
       space: { columns: { uid: true, name: true } },
       authorUser: { columns: authorColumns },
     },
-    extras: {
-      isUpvoted: sql<boolean>`EXISTS(
-        SELECT 1 FROM question_upvotes qu WHERE qu.username = ${username} AND qu.question_uid = questions.uid
-      )`.as("is_upvoted"),
-    },
     where: eq(questions.author, username!),
     orderBy: [desc(questions.timeCreated)],
     limit,
     offset,
   });
-  res.json(rows.map(mapQuestionRow));
+  const upvotes = rows.length
+    ? await db.query.questionUpvotes.findMany({
+        columns: { questionUid: true },
+        where: and(eq(questionUpvotes.username, username!), inArray(questionUpvotes.questionUid, rows.map((r) => r.uid))),
+      })
+    : [];
+  const upvotedSet = new Set(upvotes.map((u) => u.questionUid));
+  res.json(rows.map((r) => mapQuestionRow(r, upvotedSet.has(r.uid))));
 });
 
 // GET /users/me/notifications
@@ -152,14 +154,14 @@ router.get("/:username", async (req: Request, res: Response): Promise<void> => {
   res.json({ username: row.username, bio: row.bio, avatar: row.avatar, link: row.links, posted: row.posted, answered: row.answered });
 });
 
-function mapQuestionRow(r: any) {
+function mapQuestionRow(r: any, isUpvoted: boolean) {
   return {
     question: {
       uid: r.uid,
       content: r.content,
       timeCreated: r.timeCreated,
       upvotes: r.upvotesCount ?? 0,
-      isUpvoted: r.isUpvoted,
+      isUpvoted,
       authorUsername: r.author,
       spaceUid: r.space?.uid,
       spaceName: r.space?.name,
