@@ -1,0 +1,2 @@
+ALTER TABLE "notifications" ALTER COLUMN "actor_username" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "notifications" ADD CONSTRAINT "unique_notification_idx" UNIQUE("user_username","actor_username","type","reference_uid");

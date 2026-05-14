@@ -15,6 +15,13 @@
       "when": 1774613288531,
       "tag": "0001_amazing_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778750904951,
+      "tag": "0002_demonic_human_torch",
+      "breakpoints": true
     }
   ]
 }
