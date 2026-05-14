@@ -1,14 +1,7 @@
 import { useState } from "react";
 import type { User } from "@/types";
-import { HugeiconsIcon } from "@hugeicons/react";
 import { useNavigate, useLocation } from "react-router";
-import {
-  Home01Icon,
-  Search01Icon,
-  Add01Icon,
-  FavouriteIcon,
-  ArrowDown01Icon,
-} from "@hugeicons/core-free-icons";
+import { House, MagnifyingGlass, Plus, Bell, CaretDown } from "@phosphor-icons/react";
 import { SPACE_COLORS } from "@/components/spaces/consts";
 import { useListSpaces } from "@/hooks/use-space";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import {
   Dialog,
   DialogContent,
@@ -33,7 +27,7 @@ import { useCreateQuestion } from "@/hooks/use-questions";
 import { validateMentions } from "@/lib/mention-validation";
 import { toast } from "@/lib/toast";
 interface NavItem {
-  icon: typeof Home01Icon;
+  icon: typeof House;
   path?: string;
   label: string;
   onClick?: () => void;
@@ -41,14 +35,16 @@ interface NavItem {
   hasBadge?: boolean;
 }
 function NavButton({
-  icon,
+  icon: Icon,
+  label,
   isActive,
   isAction,
   hasBadge,
   isMobile,
   onClick,
 }: {
-  icon: typeof Home01Icon;
+  icon: typeof House;
+  label?: string;
   isActive?: boolean;
   isAction?: boolean;
   hasBadge?: boolean;
@@ -59,25 +55,30 @@ function NavButton({
     <button
       onClick={onClick}
       className={cn(
-        "relative flex items-center justify-center rounded-xl transition-all duration-150 active:scale-95 group/nav",
-        isMobile ? "p-2" : "size-12",
+        "relative flex items-center justify-center min-[1200px]:justify-start gap-4 rounded-xl transition-all duration-150 active:scale-95 group/nav",
+        isMobile ? "p-2" : "p-3 w-full max-w-[200px]",
         isAction
-          ? "bg-primary text-primary-foreground hover:opacity-80"
+          ? "bg-primary text-primary-foreground hover:opacity-80 justify-center"
           : isActive
-            ? "bg-accent text-foreground"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            ? "bg-accent text-foreground font-semibold"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground font-medium",
       )}
     >
-      <HugeiconsIcon
-        icon={icon}
-        className="size-5"
-        strokeWidth={isActive ? 2.5 : 1.8}
+      <Icon
+        size={24}
+        weight={isActive ? "fill" : "regular"}
+        className="shrink-0"
       />
+      {!isMobile && label && (
+        <span className="hidden min-[1200px]:block text-base">
+          {label}
+        </span>
+      )}
       {hasBadge && (
         <span
           className={cn(
             "absolute rounded-full bg-red-500 border-2 border-background",
-            isMobile ? "top-1 right-1 size-2" : "top-2 right-2 size-2.5",
+            isMobile ? "top-1 right-1 size-2" : "top-2 left-7 size-2.5",
           )}
         />
       )}
@@ -99,8 +100,8 @@ function ProfileButton({
     <button
       onClick={onClick}
       className={cn(
-        "relative flex items-center justify-center rounded-xl transition-all duration-150 active:scale-95",
-        isMobile ? "p-2" : "size-12",
+        "relative flex items-center justify-center min-[1200px]:justify-start gap-3 rounded-xl transition-all duration-150 active:scale-95",
+        isMobile ? "p-2" : "p-2 w-full max-w-[200px]",
         isActive
           ? "bg-accent text-foreground"
           : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -109,8 +110,18 @@ function ProfileButton({
       <UserAvatar
         src={user?.avatar}
         name={user?.username || "U"}
-        className="size-6"
+        className="size-8 shrink-0"
       />
+      {!isMobile && (
+        <div className="hidden min-[1200px]:block text-left overflow-hidden">
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">
+            {user?.username || "User"}
+          </p>
+          <p className="text-xs text-neutral-500 truncate">
+            @{user?.username}
+          </p>
+        </div>
+      )}
     </button>
   );
 }
@@ -199,9 +210,9 @@ function CreateQueryDialog({
                     </>
                   ) : (
                     <>
-                      <HugeiconsIcon
-                        icon={ArrowDown01Icon}
-                        className="size-3.5 text-neutral-500"
+                      <CaretDown
+                        size={14}
+                        className="text-neutral-500"
                       />
                       Select Space
                     </>
@@ -243,10 +254,10 @@ function CreateQueryDialog({
                 }
               >
                 {isPending ? "Asking..." : "Ask"}
-                <HugeiconsIcon
-                  icon={Add01Icon}
-                  strokeWidth={2}
-                  className="ml-1.5 size-3.5"
+                <Plus
+                  size={14}
+                  weight="bold"
+                  className="ml-1.5"
                 />
               </Button>
             </div>
@@ -263,15 +274,15 @@ export function AppSidebar() {
   const location = useLocation();
   const { data: user } = useAuth();
   const navItems: NavItem[] = [
-    { icon: Home01Icon, path: "/home", label: "Home" },
-    { icon: Search01Icon, path: "/explore", label: "Explore" },
-    { icon: Add01Icon, label: "Create", isAction: true },
+    { icon: House, path: "/home", label: "Home" },
+    { icon: MagnifyingGlass, path: "/explore", label: "Explore" },
     {
-      icon: FavouriteIcon,
+      icon: Bell,
       path: "/notifications",
       label: "Notifications",
       hasBadge: true,
     },
+    { icon: Plus, label: "Ask", isAction: true },
   ];
   const navigateTo = (path: string) => {
     if (path === location.pathname) return;
@@ -303,20 +314,20 @@ export function AppSidebar() {
             </div>
             <div className="mx-4">
               <NavButton
-                icon={navItems[2].icon}
+                icon={navItems[3].icon}
                 isAction={true}
                 isMobile={true}
-                onClick={() => handleNavClick(navItems[2])}
+                onClick={() => handleNavClick(navItems[3])}
               />
             </div>
             <div className="flex-1 flex justify-around">
               <NavButton
                 key="notifications"
-                icon={navItems[3].icon}
-                isActive={isActive(navItems[3].path)}
-                hasBadge={navItems[3].hasBadge}
+                icon={navItems[2].icon}
+                isActive={isActive(navItems[2].path)}
+                hasBadge={navItems[2].hasBadge}
                 isMobile={true}
-                onClick={() => handleNavClick(navItems[3])}
+                onClick={() => handleNavClick(navItems[2])}
               />
               <ProfileButton
                 user={user}
@@ -333,15 +344,21 @@ export function AppSidebar() {
   }
   return (
     <>
-      <aside className="fixed top-0 left-0 h-screen flex flex-col items-center py-8 border-r border-border bg-background z-40 w-20">
-        <div className="flex size-9 items-center justify-center rounded-md border border-border bg-foreground text-background">
-          <span className="font-pixel-square text-xs font-bold">Q</span>
+      <aside className="sticky top-0 h-screen flex flex-col py-8 border-r border-border bg-background z-40 w-[80px] min-[1200px]:w-[250px] items-center min-[1200px]:items-start min-[1200px]:pl-8 shrink-0">
+        <div className="flex items-center gap-4 mb-8 min-[1200px]:px-4">
+          <div className="flex size-9 items-center justify-center rounded-md border border-border bg-foreground text-background shrink-0">
+            <span className="font-pixel-square text-xs font-bold">Q</span>
+          </div>
+          <span className="font-pixel-square text-xl font-bold hidden min-[1200px]:block tracking-tight text-foreground">
+            Quorum
+          </span>
         </div>
-        <nav className="flex-1 flex flex-col items-center justify-center gap-4 w-full">
+        <nav className="flex flex-col items-center min-[1200px]:items-stretch gap-4 w-full min-[1200px]:max-w-[200px]">
           {navItems.map((item) => (
             <NavButton
               key={item.label}
               icon={item.icon}
+              label={item.label}
               isActive={isActive(item.path)}
               isAction={item.isAction}
               hasBadge={item.hasBadge}
@@ -349,13 +366,15 @@ export function AppSidebar() {
               onClick={() => handleNavClick(item)}
             />
           ))}
+        </nav>
+        <div className="mt-8 w-full flex justify-center min-[1200px]:justify-start min-[1200px]:max-w-[200px]">
           <ProfileButton
             user={user}
             isMobile={false}
             isActive={isActive("/profile")}
             onClick={() => navigateTo("/profile")}
           />
-        </nav>
+        </div>
       </aside>
       <CreateQueryDialog open={createOpen} onOpenChange={setCreateOpen} />
     </>

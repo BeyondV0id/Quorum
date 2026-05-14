@@ -1,12 +1,6 @@
 import { Toast } from "@base-ui/react/toast";
 import { cn } from "@/lib/utils";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  Cancel01Icon,
-  Tick02Icon,
-  Alert01Icon,
-  InformationCircleIcon,
-} from "@hugeicons/core-free-icons";
+import { CheckCircle, WarningCircle, Info, X } from "@phosphor-icons/react";
 import { buttonVariants } from "@/components/ui/button-variants";
 import { toastManager } from "@/lib/toast";
 
@@ -31,27 +25,31 @@ function ToastList() {
         >
           <Toast.Content className="flex-1 flex items-start gap-3">
             {toast.type === "success" && (
-              <HugeiconsIcon
-                icon={Tick02Icon}
-                className="size-5 shrink-0 text-green-600"
+              <CheckCircle
+                size={20}
+                weight="fill"
+                className="shrink-0 text-green-600"
               />
             )}
             {toast.type === "error" && (
-              <HugeiconsIcon
-                icon={Alert01Icon}
-                className="size-5 shrink-0 text-destructive"
+              <WarningCircle
+                size={20}
+                weight="fill"
+                className="shrink-0 text-destructive"
               />
             )}
             {toast.type === "warning" && (
-              <HugeiconsIcon
-                icon={Alert01Icon}
-                className="size-5 shrink-0 text-yellow-600"
+              <WarningCircle
+                size={20}
+                weight="fill"
+                className="shrink-0 text-yellow-600"
               />
             )}
             {toast.type === "info" && (
-              <HugeiconsIcon
-                icon={InformationCircleIcon}
-                className="size-5 shrink-0 text-foreground"
+              <Info
+                size={20}
+                weight="fill"
+                className="shrink-0 text-foreground"
               />
             )}
 
@@ -74,7 +72,7 @@ function ToastList() {
             </div>
           </Toast.Content>
           <Toast.Close className="absolute top-2 right-2 rounded-full p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100 focus:opacity-100 focus:outline-none focus:ring-2">
-            <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            <X size={16} />
           </Toast.Close>
         </Toast.Root>
       ))}

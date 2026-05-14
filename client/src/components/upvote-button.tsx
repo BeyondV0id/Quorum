@@ -1,7 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { CircleArrowUp01Icon } from "@hugeicons/core-free-icons";
+import { ThumbsUp } from "@phosphor-icons/react";
 import type { UpvoteState } from "@/types";
 
 type UpvoteButtonProps = UpvoteState & {
@@ -35,7 +34,10 @@ export function UpvoteButton({
           "text-blue-500 hover:text-blue-600 dark:text-blue-500 dark:hover:text-blue-500",
       )}
     >
-      <HugeiconsIcon icon={CircleArrowUp01Icon} className="size-4 transition-transform group-hover/upvote:-translate-y-0.5" />
+      <ThumbsUp
+        weight={isUpvoted ? "fill" : "regular"}
+        className="size-4 transition-transform group-hover/upvote:-translate-y-0.5"
+      />
       <span className="text-xs font-medium">{count}</span>
     </Button>
   );

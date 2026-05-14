@@ -1,11 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  UserMultiple02Icon,
-  Add01Icon,
-  PencilEdit02Icon,
-} from "@hugeicons/core-free-icons";
+import { Users, Plus, PencilSimple, MagnifyingGlass } from "@phosphor-icons/react";
 import { cn, getInitials } from "@/lib/utils";
 import { Link } from "react-router";
 import type { Space } from "@/types";
@@ -65,7 +60,7 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
             {space.name}
           </h3>
           <div className="flex items-center gap-1.5 text-neutral-500 mt-0.5">
-            <HugeiconsIcon icon={UserMultiple02Icon} className="size-3" />
+            <Users size={12} weight="bold" />
             <span className="text-xs font-medium">
               {formatMemberCount(space.memberCount || 0)} members
             </span>
@@ -84,7 +79,7 @@ export function SpaceCard({ space, compact = false }: SpaceCardProps) {
             }}
             aria-label="Edit space"
           >
-            <HugeiconsIcon icon={PencilEdit02Icon} className="size-4" />
+            <PencilSimple size={16} />
           </Button>
         )}
         <Button
@@ -117,7 +112,7 @@ interface SpaceListProps {
   limit?: number;
 }
 import { DashedEmptyState } from "@/components/ui/dashed-empty-state";
-import { Search01Icon } from "@hugeicons/core-free-icons";
+// Replaced import above
 
 export function SpaceList({ spaces, limit }: SpaceListProps) {
   const displaySpaces = limit ? spaces.slice(0, limit) : spaces;
@@ -126,7 +121,7 @@ export function SpaceList({ spaces, limit }: SpaceListProps) {
       <DashedEmptyState
         title="No spaces found"
         description="Try searching for something else or create a new one."
-        icon={<HugeiconsIcon icon={Search01Icon} className="size-8 opacity-50" />}
+        icon={<MagnifyingGlass size={32} className="opacity-50" />}
       />
     );
   }
@@ -158,7 +153,7 @@ export function CreateSpaceButton({
       )}
     >
       <div className="size-10 rounded-xl flex items-center justify-center bg-neutral-100 dark:bg-neutral-800 text-neutral-500 group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-neutral-100">
-        <HugeiconsIcon icon={Add01Icon} className="size-5" />
+        <Plus size={20} />
       </div>
       <span className="text-sm font-medium">Create a new Space</span>
     </button>

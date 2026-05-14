@@ -6,6 +6,7 @@ import { GuestRoute, ProtectedRoute } from "@/components/route-guards";
 import { Toaster } from "@/components/ui/toast";
 import { ReloadPrompt } from "@/components/reload-prompt";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { SeoMeta } from "@/components/seo-meta";
 
 const Home = lazy(() => import("@/pages/home"));
 const Profile = lazy(() => import("@/pages/profile"));
@@ -21,11 +22,13 @@ const ResetPassword = lazy(() => import("@/pages/reset-password"));
 const Onboarding = lazy(() => import("@/pages/onboarding"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
+
+
 function AuthenticatedLayout() {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex justify-center min-h-screen w-full">
       <AppSidebar />
-      <main className="w-full flex flex-col items-center md:pl-20">
+      <main className="flex-1 flex flex-col items-center">
         <Outlet />
       </main>
     </div>
@@ -42,6 +45,7 @@ export default function App() {
       }
     >
       <BrowserRouter>
+        <SeoMeta />
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
             <Route path="/verify-email" element={<VerifyEmail />} />

@@ -2,8 +2,7 @@ import type { QuestionItem } from "@/types";
 import { QuestionItem as QuestionItemComponent } from "./question-item";
 import { Accordion } from "@/components/ui/accordion";
 import { DashedEmptyState } from "@/components/ui/dashed-empty-state";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { BubbleChatIcon } from "@hugeicons/core-free-icons";
+import { ChatTeardropText } from "@phosphor-icons/react";
 
 type QuestionListProps = {
   questions: QuestionItem[];
@@ -29,7 +28,7 @@ export function QuestionList({ questions, onDelete, showSpaceName, canPin }: Que
     <DashedEmptyState
       title="No questions yet"
       description="Be the first to ask a question in this space."
-      icon={<HugeiconsIcon icon={BubbleChatIcon} className="size-8 opacity-50" />}
+      icon={<ChatTeardropText size={32} className="opacity-50" />}
     />
   );
 }

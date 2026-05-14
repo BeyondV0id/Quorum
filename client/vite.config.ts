@@ -1,11 +1,28 @@
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const clientUrl = (env.VITE_CLIENT_URL || "http://localhost:5173").replace(
+    /\/+$/,
+    ""
+  );
+  const ogImageUrl =
+    env.VITE_OG_IMAGE_URL?.trim() || `${clientUrl}/thumb.jpeg`;
+
+  return {
   plugins: [
+    {
+      name: "inject-html-meta-urls",
+      transformIndexHtml(html) {
+        return html
+          .replaceAll("%META_CLIENT_URL%", clientUrl)
+          .replaceAll("%META_OG_IMAGE_URL%", ogImageUrl);
+      },
+    },
     react(),
     tailwindcss(),
     VitePWA({
@@ -92,4 +109,5 @@ export default defineConfig({
       },
     },
   },
+};
 });

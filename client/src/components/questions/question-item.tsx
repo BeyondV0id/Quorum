@@ -21,16 +21,7 @@ import { useUpdateVote } from "@/hooks/use-upvote";
 import { useAuth } from "@/hooks/use-auth";
 import { usePinQuestion, useUnpinQuestion, useUpdateQuestion } from "@/hooks/use-questions";
 import type { QuestionItem } from "@/types";
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  MoreHorizontalIcon,
-  Delete02Icon,
-  PencilEdit02Icon,
-  Copy01Icon,
-  Alert01Icon,
-  Pin02Icon,
-  PinOffIcon,
-} from "@hugeicons/core-free-icons";
+import { DotsThree, Trash, PencilSimple, Copy, WarningCircle, PushPin, PushPinSlash } from "@phosphor-icons/react";
 import { UpvoteButton } from "../upvote-button";
 import { ReplyItem } from "./reply-item";
 import { ReplyForm } from "./reply-form";
@@ -224,9 +215,8 @@ export function QuestionItem({
                             props.onClick?.(e);
                           }}
                         >
-                          <HugeiconsIcon
-                            icon={MoreHorizontalIcon}
-                            className="size-5"
+                          <DotsThree
+                            size={20}
                           />
                         </Button>
                       )}
@@ -238,27 +228,27 @@ export function QuestionItem({
                           toast.success("Copied to clipboard");
                         }}
                       >
-                        <HugeiconsIcon
-                          icon={Copy01Icon}
-                          className="mr-2 size-4"
+                        <Copy
+                          size={16}
+                          className="mr-2"
                         />
                         Copy Text
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => alert("Reported content")}
                       >
-                        <HugeiconsIcon
-                          icon={Alert01Icon}
-                          className="mr-2 size-4"
+                        <WarningCircle
+                          size={16}
+                          className="mr-2"
                         />
                         Report
                       </DropdownMenuItem>
                       {user?.username === question.authorUsername && (
                         <>
                           <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                            <HugeiconsIcon
-                              icon={PencilEdit02Icon}
-                              className="mr-2 size-4"
+                            <PencilSimple
+                              size={16}
+                              className="mr-2"
                             />
                             Edit
                           </DropdownMenuItem>
@@ -266,9 +256,9 @@ export function QuestionItem({
                             variant="destructive"
                             onClick={() => onDelete(questionId)}
                           >
-                            <HugeiconsIcon
-                              icon={Delete02Icon}
-                              className="mr-2 size-4"
+                            <Trash
+                              size={16}
+                              className="mr-2"
                             />
                             Delete
                           </DropdownMenuItem>
@@ -283,10 +273,11 @@ export function QuestionItem({
                           }
                           disabled={isPinPending || isUnpinPending}
                         >
-                          <HugeiconsIcon
-                            icon={isPinned ? PinOffIcon : Pin02Icon}
-                            className="mr-2 size-4"
-                          />
+                          {isPinned ? (
+                            <PushPinSlash size={16} className="mr-2" />
+                          ) : (
+                            <PushPin size={16} className="mr-2" />
+                          )}
                           {isPinned ? "Unpin" : "Pin"}
                         </DropdownMenuItem>
                       )}
