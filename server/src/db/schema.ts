@@ -8,7 +8,6 @@ import {
   uuid,
   integer,
   uniqueIndex,
-  unique,
 } from "drizzle-orm/pg-core";
 
 // ─── Better Auth core tables ──────────────────────────────────────────────────
@@ -168,7 +167,7 @@ export const notifications = pgTable("notifications", {
   userUsername: text("user_username")
     .notNull()
     .references(() => user.username, { onUpdate: "cascade", onDelete: "cascade" }),
-  actorUsername: text("actor_username").notNull().references(() => user.username, {
+  actorUsername: text("actor_username").references(() => user.username, {
     onUpdate: "cascade",
     onDelete: "cascade",
   }),
@@ -177,7 +176,7 @@ export const notifications = pgTable("notifications", {
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 }, (t) => [
-  unique("unique_notification_idx").on(t.userUsername, t.actorUsername, t.type, t.referenceUid)
+  uniqueIndex("unique_notification_idx").on(t.userUsername, t.actorUsername, t.type, t.referenceUid)
 ]);
 
 // ─── Relations ────────────────────────────────────────────────────────────────

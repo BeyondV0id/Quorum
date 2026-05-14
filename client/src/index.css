@@ -46,8 +46,8 @@
     color-scheme: light;
     --background: hsl(0 0% 100%);
     --foreground: hsl(200 10% 5%);
-    --card: #0F1112;
-    --card-foreground: #E6E6E6;
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(200 10% 5%);
     --popover: hsl(0 0% 100%);
     --popover-foreground: hsl(200 10% 5%);
     --primary: hsl(240 5.9% 10%);

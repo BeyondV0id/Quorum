@@ -1,29 +1,75 @@
+import { useState, useEffect, useCallback } from "react";
 import { fetchProfile, updateProfile, fetchPublicProfile } from "@/api/profile";
-import { useMutation, useQuery, useQueryClient } from "./use-simple";
 import type { User } from "@/types";
 
 export function useFetchProfile() {
-  return useQuery({
-    queryKey: ["profile"],
-    queryFn: () => fetchProfile(),
-  });
+  const [data, setData] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetch = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetchProfile();
+      setData(res);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useUpdateProfile() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (user: User) => updateProfile(user),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["auth"] });
-    },
-  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = async (
+    user: User,
+    options?: { onSuccess?: () => void; onSettled?: () => void }
+  ) => {
+    setIsPending(true);
+    try {
+      await updateProfile(user);
+      options?.onSuccess?.();
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
+      options?.onSettled?.();
+    }
+  };
+
+  return { mutate, isPending, error };
 }
 
 export function useFetchPublicProfile(username?: string) {
-  return useQuery({
-    queryKey: ["profile", username],
-    queryFn: () => fetchPublicProfile(username!),
-    enabled: !!username,
-  });
+  const [data, setData] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(!!username);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetch = useCallback(async () => {
+    if (!username) return;
+    setIsLoading(true);
+    try {
+      const res = await fetchPublicProfile(username);
+      setData(res);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [username]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }

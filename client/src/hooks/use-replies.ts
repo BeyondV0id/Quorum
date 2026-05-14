@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "./use-simple";
+import { useState, useEffect, useCallback } from "react";
 import {
   fetchReplies,
   createReply,
@@ -9,63 +9,117 @@ import {
 } from "@/api/replies";
 
 export function useRepliesQuery(questionId: string | undefined) {
-  return useQuery({
-    queryKey: ["replies", questionId],
-    queryFn: () => fetchReplies(questionId!),
-    enabled: !!questionId,
-  });
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(!!questionId);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetch = useCallback(async () => {
+    if (!questionId) return;
+    setIsLoading(true);
+    try {
+      const res = await fetchReplies(questionId);
+      setData(res);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [questionId]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useCreateReply() {
-  const queryClient = useQueryClient();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useMutation({
-    mutationFn: ({
+  const mutate = async (
+    {
       questionId,
       content,
     }: {
       questionId: string;
       content: string;
-    }) => createReply(questionId, { content }),
-    onSettled: (_, __, { questionId }) => {
-      queryClient.invalidateQueries({
-        queryKey: ["replies", questionId],
-      });
     },
-  });
+    options?: { onSuccess?: (data: any) => void; onSettled?: () => void }
+  ) => {
+    setIsPending(true);
+    try {
+      const data = await createReply(questionId, { content });
+      options?.onSuccess?.(data);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
+      options?.onSettled?.();
+    }
+  };
+
+  return { mutate, isPending, error };
 }
 
 export function useDeleteReply() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = async (
+    {
       questionId,
       replyId,
     }: {
       questionId: string;
       replyId: string;
-    }) => deleteReply(questionId, replyId),
-    onSettled: (_, __, { questionId }) => {
-      queryClient.invalidateQueries({ queryKey: ["replies", questionId] });
     },
-  });
+    options?: { onSuccess?: () => void; onSettled?: () => void }
+  ) => {
+    setIsPending(true);
+    try {
+      await deleteReply(questionId, replyId);
+      options?.onSuccess?.();
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
+      options?.onSettled?.();
+    }
+  };
+
+  return { mutate, isPending, error };
 }
 
 export function useUpdateReply() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ qid, rid, content }: { qid: string; rid: string; content: string }) =>
-      updateReply(qid, rid, content),
-    onSuccess: (_, { qid }) => {
-      queryClient.invalidateQueries({ queryKey: ["replies", qid] });
-    },
-  });
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = async (
+    { qid, rid, content }: { qid: string; rid: string; content: string },
+    options?: { onSuccess?: () => void; onSettled?: () => void }
+  ) => {
+    setIsPending(true);
+    try {
+      await updateReply(qid, rid, content);
+      options?.onSuccess?.();
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
+      options?.onSettled?.();
+    }
+  };
+
+  return { mutate, isPending, error };
 }
 
 export function useAcceptReply() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = async (
+    {
       qid,
       rid,
       accept,
@@ -73,12 +127,24 @@ export function useAcceptReply() {
       qid: string;
       rid: string;
       accept: boolean;
-    }) => (accept ? acceptReply(qid, rid) : unacceptReply(qid, rid)),
-    onSuccess: (_data, { qid }) => {
-      queryClient.invalidateQueries({ queryKey: ["replies", qid] });
-      queryClient.invalidateQueries({ queryKey: ["questions"] });
-      queryClient.invalidateQueries({ queryKey: ["user-questions"] });
-      queryClient.invalidateQueries({ queryKey: ["question", qid] });
     },
-  });
+    options?: { onSuccess?: () => void; onSettled?: () => void }
+  ) => {
+    setIsPending(true);
+    try {
+      if (accept) {
+        await acceptReply(qid, rid);
+      } else {
+        await unacceptReply(qid, rid);
+      }
+      options?.onSuccess?.();
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsPending(false);
+      options?.onSettled?.();
+    }
+  };
+
+  return { mutate, isPending, error };
 }
