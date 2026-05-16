@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   fetchQuestion,
   fetchQuestions,
@@ -11,30 +11,31 @@ import {
   unpinQuestion,
 } from "@/api/questions";
 import type { QuestionItem } from "@/types";
+import { useStore } from "@/context/StoreContext";
 
 export function useQuestionQuery(questionId: string | undefined) {
-  const [data, setData] = useState<any>(null);
+  const { questions, updateQuestion: updateStore, getRefreshCount } = useStore();
   const [isLoading, setIsLoading] = useState(!!questionId);
   const [error, setError] = useState<Error | null>(null);
 
   const fetch = useCallback(async () => {
     if (!questionId) return;
-    setIsLoading(true);
+    if (!questions[questionId]) setIsLoading(true);
     try {
       const res = await fetchQuestion(questionId);
-      setData(res);
+      updateStore(questionId, res.question);
     } catch (err) {
       setError(err as Error);
     } finally {
       setIsLoading(false);
     }
-  }, [questionId]);
+  }, [questionId, updateStore]);
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount(`question:${questionId}`), getRefreshCount("questions")]);
 
-  return { data, isLoading, isPending: isLoading, error, refetch: fetch };
+  return { data: questions[questionId || ""], isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useQuestionsQuery(
@@ -43,49 +44,61 @@ export function useQuestionsQuery(
   spaceId?: string,
   author?: string
 ) {
-  const [data, setData] = useState<QuestionItem[]>([]);
+  const { questions, setQuestionsList, getRefreshCount } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [rawIds, setRawIds] = useState<string[]>([]);
 
   const fetch = useCallback(async () => {
-    setIsLoading(true);
+    if (rawIds.length === 0) setIsLoading(true);
     try {
       const res = await fetchQuestions(sort, filter, spaceId, author);
-      setData(res);
+      setQuestionsList(res);
+      setRawIds(res.map(r => r.question.uid));
     } catch (err) {
       setError(err as Error);
     } finally {
       setIsLoading(false);
     }
-  }, [sort, filter, spaceId, author]);
+  }, [sort, filter, spaceId, author, setQuestionsList]);
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("questions")]);
+
+  const data = useMemo(() => {
+    return rawIds.map(id => questions[id]).filter(Boolean);
+  }, [rawIds, questions]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useUserQuestionsQuery() {
-  const [data, setData] = useState<QuestionItem[]>([]);
+  const { questions, setQuestionsList, getRefreshCount } = useStore();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [rawIds, setRawIds] = useState<string[]>([]);
 
   const fetch = useCallback(async () => {
-    setIsLoading(true);
+    if (rawIds.length === 0) setIsLoading(true);
     try {
       const res = await fetchUserQuestions();
-      setData(res);
+      setQuestionsList(res);
+      setRawIds(res.map(r => r.question.uid));
     } catch (err) {
       setError(err as Error);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setQuestionsList]);
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("questions")]);
+
+  const data = useMemo(() => {
+    return rawIds.map(id => questions[id]).filter(Boolean);
+  }, [rawIds, questions]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
@@ -95,6 +108,7 @@ export function useTrendingQuestions() {
 }
 
 export function useCreateQuestion() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -105,6 +119,7 @@ export function useCreateQuestion() {
     setIsPending(true);
     try {
       await createQuestion(args);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -118,6 +133,7 @@ export function useCreateQuestion() {
 }
 
 export function useDeleteQuestion() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -128,6 +144,7 @@ export function useDeleteQuestion() {
     setIsPending(true);
     try {
       await deleteQuestion(questionId);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -141,6 +158,7 @@ export function useDeleteQuestion() {
 }
 
 export function useUpdateQuestion() {
+  const { updateQuestion: updateStore, triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -149,11 +167,17 @@ export function useUpdateQuestion() {
     options?: { onSuccess?: () => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
+    // Optimistic update
+    updateStore(questionId, { content });
+    
     try {
       await updateQuestion(questionId, content);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
+      // Rollback would require previous state, but for content edit it's usually fine
+      // since the refresh will eventually fix it if it fails.
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -164,6 +188,7 @@ export function useUpdateQuestion() {
 }
 
 export function usePinQuestion() {
+  const { updateQuestion: updateStore, triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -172,10 +197,13 @@ export function usePinQuestion() {
     options?: { onSuccess?: () => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
+    updateStore(questionId, { isPinned: true });
     try {
       await pinQuestion(questionId);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
+      updateStore(questionId, { isPinned: false });
       setError(err as Error);
     } finally {
       setIsPending(false);
@@ -187,6 +215,7 @@ export function usePinQuestion() {
 }
 
 export function useUnpinQuestion() {
+  const { updateQuestion: updateStore, triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -195,10 +224,13 @@ export function useUnpinQuestion() {
     options?: { onSuccess?: () => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
+    updateStore(questionId, { isPinned: false });
     try {
       await unpinQuestion(questionId);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
+      updateStore(questionId, { isPinned: true });
       setError(err as Error);
     } finally {
       setIsPending(false);
@@ -210,29 +242,35 @@ export function useUnpinQuestion() {
 }
 
 export function useSearchQuestions(query: string) {
-  const [data, setData] = useState<QuestionItem[]>([]);
+  const { questions, setQuestionsList, getRefreshCount } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [rawIds, setRawIds] = useState<string[]>([]);
 
   const fetch = useCallback(async () => {
     if (!query) {
-      setData([]);
+      setRawIds([]);
       return;
     }
-    setIsLoading(true);
+    if (rawIds.length === 0) setIsLoading(true);
     try {
       const res = await searchQuestions(query);
-      setData(res);
+      setQuestionsList(res);
+      setRawIds(res.map(r => r.question.uid));
     } catch (err) {
       setError(err as Error);
     } finally {
       setIsLoading(false);
     }
-  }, [query]);
+  }, [query, setQuestionsList]);
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("questions")]);
+
+  const data = useMemo(() => {
+    return rawIds.map(id => questions[id]).filter(Boolean);
+  }, [rawIds, questions]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchProfile, updateProfile, fetchPublicProfile } from "@/api/profile";
 import type { User } from "@/types";
+import { useStore } from "@/context/StoreContext";
 
 export function useFetchProfile() {
+  const { getRefreshCount } = useStore();
   const [data, setData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -21,12 +23,13 @@ export function useFetchProfile() {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("profile")]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useUpdateProfile() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -37,6 +40,7 @@ export function useUpdateProfile() {
     setIsPending(true);
     try {
       await updateProfile(user);
+      triggerRefresh("profile");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -69,7 +73,7 @@ export function useFetchPublicProfile(username?: string) {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("profile")]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }

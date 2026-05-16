@@ -7,8 +7,10 @@ import {
   updateSpace,
 } from "@/api/spaces";
 import type { Space } from "@/types";
+import { useStore } from "@/context/StoreContext";
 
 export function useCreateSpace() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -19,6 +21,7 @@ export function useCreateSpace() {
     setIsPending(true);
     try {
       await createSpace(space);
+      triggerRefresh("spaces");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -32,12 +35,13 @@ export function useCreateSpace() {
 }
 
 export function useListSpaces(query?: string) {
+  const { getRefreshCount } = useStore();
   const [data, setData] = useState<Space[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
   const fetch = useCallback(async () => {
-    setIsLoading(true);
+    if (data.length === 0) setIsLoading(true);
     try {
       const res = await listSpaces(query);
       setData(res);
@@ -50,12 +54,13 @@ export function useListSpaces(query?: string) {
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount("spaces")]);
 
   return { data, isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useJoinSpace() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -66,6 +71,8 @@ export function useJoinSpace() {
     setIsPending(true);
     try {
       await joinSpace(uid);
+      triggerRefresh("spaces");
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -79,6 +86,7 @@ export function useJoinSpace() {
 }
 
 export function useLeaveSpace() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -89,6 +97,8 @@ export function useLeaveSpace() {
     setIsPending(true);
     try {
       await leaveSpace(uid);
+      triggerRefresh("spaces");
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -102,6 +112,7 @@ export function useLeaveSpace() {
 }
 
 export function useUpdateSpace() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -112,6 +123,7 @@ export function useUpdateSpace() {
     setIsPending(true);
     try {
       await updateSpace(uid, space);
+      triggerRefresh("spaces");
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);

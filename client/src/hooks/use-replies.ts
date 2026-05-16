@@ -7,33 +7,35 @@ import {
   acceptReply,
   unacceptReply,
 } from "@/api/replies";
+import { useStore } from "@/context/StoreContext";
 
 export function useRepliesQuery(questionId: string | undefined) {
-  const [data, setData] = useState<any[]>([]);
+  const { replies, setRepliesList, getRefreshCount } = useStore();
   const [isLoading, setIsLoading] = useState(!!questionId);
   const [error, setError] = useState<Error | null>(null);
 
   const fetch = useCallback(async () => {
     if (!questionId) return;
-    setIsLoading(true);
+    if (!replies[questionId]) setIsLoading(true);
     try {
       const res = await fetchReplies(questionId);
-      setData(res);
+      setRepliesList(questionId, res);
     } catch (err) {
       setError(err as Error);
     } finally {
       setIsLoading(false);
     }
-  }, [questionId]);
+  }, [questionId, setRepliesList]);
 
   useEffect(() => {
     fetch();
-  }, [fetch]);
+  }, [fetch, getRefreshCount(`replies:${questionId}`)]);
 
-  return { data, isLoading, isPending: isLoading, error, refetch: fetch };
+  return { data: replies[questionId || ""], isLoading, isPending: isLoading, error, refetch: fetch };
 }
 
 export function useCreateReply() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -50,6 +52,7 @@ export function useCreateReply() {
     setIsPending(true);
     try {
       const data = await createReply(questionId, { content });
+      triggerRefresh(`replies:${questionId}`);
       options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
@@ -63,6 +66,7 @@ export function useCreateReply() {
 }
 
 export function useDeleteReply() {
+  const { triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -79,6 +83,7 @@ export function useDeleteReply() {
     setIsPending(true);
     try {
       await deleteReply(questionId, replyId);
+      triggerRefresh(`replies:${questionId}`);
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -92,6 +97,7 @@ export function useDeleteReply() {
 }
 
 export function useUpdateReply() {
+  const { updateReply: updateStore, triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -100,8 +106,10 @@ export function useUpdateReply() {
     options?: { onSuccess?: () => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
+    updateStore(qid, rid, { content });
     try {
       await updateReply(qid, rid, content);
+      triggerRefresh(`replies:${qid}`);
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
@@ -115,6 +123,7 @@ export function useUpdateReply() {
 }
 
 export function useAcceptReply() {
+  const { updateReply: updateStore, triggerRefresh } = useStore();
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -131,14 +140,21 @@ export function useAcceptReply() {
     options?: { onSuccess?: () => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
+    // Optimistic
+    updateStore(qid, rid, { isAccepted: accept });
+    
     try {
       if (accept) {
         await acceptReply(qid, rid);
       } else {
         await unacceptReply(qid, rid);
       }
+      triggerRefresh(`replies:${qid}`);
+      triggerRefresh(`question:${qid}`);
+      triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
+      updateStore(qid, rid, { isAccepted: !accept });
       setError(err as Error);
     } finally {
       setIsPending(false);
