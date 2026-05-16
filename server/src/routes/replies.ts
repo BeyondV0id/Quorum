@@ -89,7 +89,7 @@ router.post("/", requireAuth, async (req: Request, res: Response): Promise<void>
       if (qAuthor && qAuthor !== username) {
         await tx.insert(notifications).values({
           userUsername: qAuthor,
-          actorUsername: username!,
+          actorUsername: username as string,
           type: "reply_question",
           referenceUid: ans.uid,
         }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });
@@ -172,7 +172,7 @@ router.post("/:ruid/votes", requireAuth, async (req: Request, res: Response): Pr
       if (author && author !== username) {
         await tx.insert(notifications).values({
           userUsername: author,
-          actorUsername: username!,
+          actorUsername: username as string,
           type: "upvote_reply",
           referenceUid: ruid,
         }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });

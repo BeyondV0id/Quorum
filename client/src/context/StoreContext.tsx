@@ -23,7 +23,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setQuestions(prev => {
       const next = { ...prev };
       list.forEach(item => {
-        next[item.question.uid] = item;
+        if (item.question.uid) {
+          next[item.question.uid] = item;
+        }
       });
       return next;
     });

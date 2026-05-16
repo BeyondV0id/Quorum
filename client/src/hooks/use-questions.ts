@@ -10,7 +10,6 @@ import {
   pinQuestion,
   unpinQuestion,
 } from "@/api/questions";
-import type { QuestionItem } from "@/types";
 import { useStore } from "@/context/StoreContext";
 
 export function useQuestionQuery(questionId: string | undefined) {
@@ -54,7 +53,7 @@ export function useQuestionsQuery(
     try {
       const res = await fetchQuestions(sort, filter, spaceId, author);
       setQuestionsList(res);
-      setRawIds(res.map(r => r.question.uid));
+      setRawIds(res.map(r => r.question.uid).filter((id): id is string => !!id));
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -84,7 +83,7 @@ export function useUserQuestionsQuery() {
     try {
       const res = await fetchUserQuestions();
       setQuestionsList(res);
-      setRawIds(res.map(r => r.question.uid));
+      setRawIds(res.map(r => r.question.uid).filter((id): id is string => !!id));
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -256,7 +255,7 @@ export function useSearchQuestions(query: string) {
     try {
       const res = await searchQuestions(query);
       setQuestionsList(res);
-      setRawIds(res.map(r => r.question.uid));
+      setRawIds(res.map(r => r.question.uid).filter((id): id is string => !!id));
     } catch (err) {
       setError(err as Error);
     } finally {

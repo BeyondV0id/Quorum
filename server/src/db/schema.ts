@@ -167,7 +167,7 @@ export const notifications = pgTable("notifications", {
   userUsername: text("user_username")
     .notNull()
     .references(() => user.username, { onUpdate: "cascade", onDelete: "cascade" }),
-  actorUsername: text("actor_username").references(() => user.username, {
+  actorUsername: text("actor_username").notNull().references(() => user.username, {
     onUpdate: "cascade",
     onDelete: "cascade",
   }),

@@ -210,40 +210,40 @@ router.delete("/:uid", requireAuth, async (req: Request, res: Response): Promise
 });
 
 // POST /questions/:uid/votes — toggle
-router.post("/:uid/votes", requireAuth, async (req: Request, res: Response): Promise<void> => {
+router.post("/:questionUid/votes", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const { username } = (req as AuthRequest).user;
-  const uid = req.params.uid as string;
+  const questionUid = req.params.questionUid as string;
   await db.transaction(async (tx) => {
     const existing = await tx.query.questionUpvotes.findFirst({
-      where: and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)),
+      where: and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, questionUid)),
     });
     if (existing) {
       await tx.delete(questionUpvotes)
-        .where(and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, uid)));
+        .where(and(eq(questionUpvotes.username, username!), eq(questionUpvotes.questionUid, questionUid)));
       const current = await tx.query.questions.findFirst({
         columns: { upvotesCount: true },
-        where: eq(questions.uid, uid),
+        where: eq(questions.uid, questionUid),
       });
       await tx.update(questions)
         .set({ upvotesCount: Math.max((current?.upvotesCount ?? 0) - 1, 0) })
-        .where(eq(questions.uid, uid));
+        .where(eq(questions.uid, questionUid));
     } else {
-      await tx.insert(questionUpvotes).values({ username: username!, questionUid: uid });
+      await tx.insert(questionUpvotes).values({ username: username!, questionUid: questionUid });
       const current = await tx.query.questions.findFirst({
         columns: { upvotesCount: true },
-        where: eq(questions.uid, uid),
+        where: eq(questions.uid, questionUid),
       });
       await tx.update(questions)
         .set({ upvotesCount: (current?.upvotesCount ?? 0) + 1 })
-        .where(eq(questions.uid, uid));
-      const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, uid) });
+        .where(eq(questions.uid, questionUid));
+      const q = await tx.query.questions.findFirst({ columns: { author: true }, where: eq(questions.uid, questionUid) });
       if (q?.author && q.author !== username) {
         const author = q.author;
         await tx.insert(notifications).values({
             userUsername: author,
-            actorUsername: username!,
+            actorUsername: username as string,
             type: "upvote_question",
-            referenceUid: uid,
+            referenceUid: questionUid,
           }).onConflictDoNothing({ target: [notifications.userUsername, notifications.actorUsername, notifications.type, notifications.referenceUid] });
       }
     }
