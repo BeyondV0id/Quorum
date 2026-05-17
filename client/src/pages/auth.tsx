@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,7 +76,6 @@ function AuthSuccessCard({
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("signup");
-  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -134,7 +132,7 @@ export default function Auth() {
           username: `${base}_${Math.random().toString(36).slice(2, 6)}`,
         } as Parameters<typeof authClient.signUp.email>[0]);
         if (error) throw new Error(error.message ?? "Sign up failed");
-        navigate("/home");
+        window.location.href = "/home";
         return;
       }
 
@@ -144,7 +142,7 @@ export default function Auth() {
         password,
       });
       if (error) throw new Error(error.message ?? "Sign in failed");
-      navigate("/home");
+      window.location.href = "/home";
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
