@@ -4,20 +4,6 @@ import { sentinelClient } from "@better-auth/infra/client";
 
 export const authClient = createAuthClient({
   baseURL: API_URL,
-  fetchOptions: {
-    onRequest: (ctx) => {
-      const token = localStorage.getItem("bearer_token");
-      if (token) {
-        ctx.headers.set("Authorization", `Bearer ${token}`);
-      }
-    },
-    onResponse: (ctx) => {
-      const authToken = ctx.response.headers.get("set-auth-token");
-      if (authToken) {
-        localStorage.setItem("bearer_token", authToken);
-      }
-    },
-  },
   plugins: [
     sentinelClient(),
     {

@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { bearer } from "better-auth/plugins";
 import { dash } from "@better-auth/infra";
 
 import { db } from "../db/index.js";
@@ -10,7 +9,24 @@ export const auth = betterAuth({
     provider: "pg",
   }),
 
-  trustedOrigins: [(process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, "")],
+  account: {
+    skipStateCookieCheck: true,
+  },
+
+  trustedOrigins: [
+    (process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, ""),
+    (process.env.BETTER_AUTH_URL ?? "http://localhost:3001").replace(/\/$/, ""),
+    "https://quorum-io.vercel.app",
+    "https://echo-server-iji0.onrender.com",
+  ],
+
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+    },
+  },
   
 
 
@@ -81,7 +97,6 @@ export const auth = betterAuth({
   },
 
   plugins: [
-    bearer(),
     dash(),
   ],
 });

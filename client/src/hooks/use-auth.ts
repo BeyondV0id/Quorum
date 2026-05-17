@@ -73,7 +73,6 @@ export function useSignout() {
   const mutate = async () => {
     setIsPending(true);
     await authClient.signOut();
-    localStorage.removeItem("bearer_token");
     setIsPending(false);
     // Force a reload to clear all states nicely
     window.location.href = "/";
