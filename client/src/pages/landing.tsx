@@ -19,26 +19,26 @@ const features = [
 
 export default function Landing() {
   return (
-    <div className="relative grid min-h-screen grid-cols-[1fr_2.5rem_auto_2.5rem_1fr] grid-rows-[1fr_1px_auto_1px_1fr] bg-background text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 text-foreground sm:px-0 sm:grid sm:grid-cols-[1fr_2.5rem_auto_2.5rem_1fr] sm:grid-rows-[1fr_1px_auto_1px_1fr]">
 
-      {/* Hatched side columns */}
-      <div className="relative col-start-2 row-span-full border-x border-border" style={HATCH} />
-      <div className="relative col-start-4 row-span-full border-x border-border" style={HATCH} />
+      {/* Hatched side columns — desktop only */}
+      <div className="relative col-start-2 row-span-full hidden border-x border-border sm:block" style={HATCH} />
+      <div className="relative col-start-4 row-span-full hidden border-x border-border sm:block" style={HATCH} />
 
-      {/* Horizontal border lines */}
-      <div className="col-span-full row-start-2 h-px bg-border" />
-      <div className="col-span-full row-start-4 h-px bg-border" />
+      {/* Horizontal border lines — desktop only */}
+      <div className="col-span-full row-start-2 hidden h-px bg-border sm:block" />
+      <div className="col-span-full row-start-4 hidden h-px bg-border sm:block" />
 
       {/* Main content card */}
-      <div className="col-start-3 row-start-3 flex w-[680px] flex-col bg-muted p-2">
-        <div className="rounded-md bg-card p-12 text-card-foreground shadow-xs">
+      <div className="w-full sm:col-start-3 sm:row-start-3 sm:flex sm:w-[680px] sm:flex-col bg-muted p-2">
+        <div className="rounded-md bg-card p-6 sm:p-12 text-card-foreground shadow-xs">
 
           {/* Brand — animated pixel word */}
-          <div className="mb-10 flex flex-col items-center gap-6 text-center">
-            <div className="flex items-center justify-center p-6">
+          <div className="mb-8 flex flex-col items-center gap-6 text-center">
+            <div className="flex items-center justify-center p-4 sm:p-6">
               <PixelHeading
                 as="h1"
-                className="text-7xl tracking-tight text-foreground leading-none"
+                className="text-5xl sm:text-7xl tracking-tight text-foreground leading-none"
               >
                 Quorum
               </PixelHeading>
