@@ -2,6 +2,7 @@ services:
   - type: web
     name: echo-server
     runtime: docker
+    rootDir: server
     plan: free
     region: frankfurt
     envVars:
