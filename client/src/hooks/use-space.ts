@@ -16,15 +16,16 @@ export function useCreateSpace() {
 
   const mutate = async (
     space: Space,
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
-      await createSpace(space);
+      const data = await createSpace(space);
       triggerRefresh("spaces");
-      options?.onSuccess?.();
+      options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -66,16 +67,17 @@ export function useJoinSpace() {
 
   const mutate = async (
     uid: string,
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
-      await joinSpace(uid);
+      const data = await joinSpace(uid);
       triggerRefresh("spaces");
       triggerRefresh("questions");
-      options?.onSuccess?.();
+      options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -92,16 +94,17 @@ export function useLeaveSpace() {
 
   const mutate = async (
     uid: string,
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
-      await leaveSpace(uid);
+      const data = await leaveSpace(uid);
       triggerRefresh("spaces");
       triggerRefresh("questions");
-      options?.onSuccess?.();
+      options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -118,15 +121,16 @@ export function useUpdateSpace() {
 
   const mutate = async (
     { uid, space }: { uid: string; space: Space },
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
-      await updateSpace(uid, space);
+      const data = await updateSpace(uid, space);
       triggerRefresh("spaces");
-      options?.onSuccess?.();
+      options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();

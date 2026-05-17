@@ -54,7 +54,7 @@ export function EditSpaceDialog({
           toast.success("Space updated");
           onOpenChange(false);
         },
-        onError: (err) => {
+        onError: (err: Error) => {
           toast.error(err instanceof Error ? err.message : "Failed to update space");
         },
       },

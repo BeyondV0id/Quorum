@@ -43,14 +43,14 @@ export function CreateSpaceDialog({
     e.preventDefault();
     if (isPending || !space.name.trim() || !space.description.trim()) return;
     createSpace(space, {
-      onSuccess: (newSpace) => {
+      onSuccess: (newSpace: Space) => {
         onOpenChange(false);
         if (newSpace?.uid) {
           navigate(`/space/${newSpace.uid}`);
           toast.success("Space created successfully");
         }
       },
-      onError: (err) => {
+      onError: (err: Error) => {
         toast.error(err instanceof Error ? err.message : "Failed to create space");
       },
     });

@@ -92,7 +92,7 @@ export default function Profile() {
         toast.success("Profile updated successfully");
         setIsEditOpen(false);
       },
-      onError: (err) => {
+      onError: (err: Error) => {
         toast.error(
           err instanceof Error ? err.message : "Failed to update profile",
         );

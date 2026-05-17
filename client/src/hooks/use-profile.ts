@@ -35,7 +35,7 @@ export function useUpdateProfile() {
 
   const mutate = async (
     user: User,
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: () => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
@@ -44,6 +44,7 @@ export function useUpdateProfile() {
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -54,6 +55,7 @@ export function useUpdateProfile() {
 }
 
 export function useFetchPublicProfile(username?: string) {
+  const { getRefreshCount } = useStore();
   const [data, setData] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(!!username);
   const [error, setError] = useState<Error | null>(null);

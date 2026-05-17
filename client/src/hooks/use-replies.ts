@@ -47,7 +47,7 @@ export function useCreateReply() {
       questionId: string;
       content: string;
     },
-    options?: { onSuccess?: (data: any) => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
@@ -56,6 +56,7 @@ export function useCreateReply() {
       options?.onSuccess?.(data);
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -78,7 +79,7 @@ export function useDeleteReply() {
       questionId: string;
       replyId: string;
     },
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     try {
@@ -87,6 +88,7 @@ export function useDeleteReply() {
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -103,7 +105,7 @@ export function useUpdateReply() {
 
   const mutate = async (
     { qid, rid, content }: { qid: string; rid: string; content: string },
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     updateStore(qid, rid, { content });
@@ -113,6 +115,7 @@ export function useUpdateReply() {
       options?.onSuccess?.();
     } catch (err) {
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
@@ -137,7 +140,7 @@ export function useAcceptReply() {
       rid: string;
       accept: boolean;
     },
-    options?: { onSuccess?: () => void; onSettled?: () => void }
+    options?: { onSuccess?: (data?: any) => void; onError?: (error: Error) => void; onSettled?: () => void }
   ) => {
     setIsPending(true);
     // Optimistic
@@ -156,6 +159,7 @@ export function useAcceptReply() {
     } catch (err) {
       updateStore(qid, rid, { isAccepted: !accept });
       setError(err as Error);
+      options?.onError?.(err as Error);
     } finally {
       setIsPending(false);
       options?.onSettled?.();
