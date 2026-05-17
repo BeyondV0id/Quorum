@@ -6,6 +6,8 @@ import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { user, questions, questionUpvotes, notifications } from "../db/schema.js";
 import { z } from "zod";
+import { auth } from "../lib/auth.js";
+import { fromNodeHeaders } from "better-auth/node";
 
 const updateUserSchema = z.object({
   username: z.string().regex(/^[^\s]+$/, "username cannot contain spaces").optional(),
@@ -61,7 +63,7 @@ router.get("/me", requireAuth, async (req: Request, res: Response): Promise<void
 
 // PATCH /users/me
 router.patch("/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
-  const { id, username: currentUsername } = (req as AuthRequest).user;
+  const { id } = (req as AuthRequest).user;
   
   const parsed = updateUserSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -71,9 +73,13 @@ router.patch("/me", requireAuth, async (req: Request, res: Response): Promise<vo
   const { username: newUsername, bio, avatar, link } = parsed.data;
 
   try {
-    if (newUsername && newUsername !== currentUsername) {
-      const existing = await db.query.user.findFirst({ columns: { id: true }, where: eq(user.username!, newUsername) });
-      if (existing) { res.status(409).json({ error: "username already taken" }); return; }
+    if (newUsername) {
+      // Get current username from DB (not session — session may be stale)
+      const current = await db.query.user.findFirst({ columns: { username: true }, where: eq(user.id, id) });
+      if (current?.username !== newUsername) {
+        const existing = await db.query.user.findFirst({ columns: { id: true }, where: eq(user.username!, newUsername) });
+        if (existing) { res.status(409).json({ error: "username already taken" }); return; }
+      }
     }
     await db.update(user).set({
       ...(newUsername ? { username: newUsername, displayUsername: newUsername } : {}),
@@ -81,6 +87,12 @@ router.patch("/me", requireAuth, async (req: Request, res: Response): Promise<vo
       ...(avatar !== undefined ? { avatar } : {}),
       ...(link !== undefined ? { links: link } : {}),
     }).where(eq(user.id, id));
+
+    // Sync Better Auth session so the new username is reflected immediately
+    if (newUsername) {
+      await auth.api.updateUser({ body: { username: newUsername } as any, headers: fromNodeHeaders(req.headers) });
+    }
+
     res.json({ message: "profile updated" });
   } catch { res.status(500).json({ error: "failed to update profile" }); }
 });
