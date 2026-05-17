@@ -1,5 +1,6 @@
 import { createAuthClient } from "better-auth/react";
 import { API_URL } from "@/config";
+import { sentinelClient } from "@better-auth/infra/client";
 
 export const authClient = createAuthClient({
   baseURL: API_URL,
@@ -18,6 +19,7 @@ export const authClient = createAuthClient({
     },
   },
   plugins: [
+    sentinelClient(),
     {
       id: "custom-fields",
       $Infer: {

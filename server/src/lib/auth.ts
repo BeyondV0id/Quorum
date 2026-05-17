@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { bearer } from "better-auth/plugins";
+import { dash } from "@better-auth/infra";
 
 import { db } from "../db/index.js";
 
@@ -81,6 +82,7 @@ export const auth = betterAuth({
 
   plugins: [
     bearer(),
+    dash(),
   ],
 });
 
