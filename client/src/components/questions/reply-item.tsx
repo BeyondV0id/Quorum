@@ -22,7 +22,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useReplyUpdateVote } from "@/hooks/use-upvote";
 import { useAcceptReply, useUpdateReply } from "@/hooks/use-replies";
-import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { formatRelativeTime } from "@/lib/format-time";
 import { toast } from "@/lib/toast";
@@ -39,7 +39,8 @@ export function ReplyItem({ answerItem, onDelete, canAccept }: ReplyItemProps) {
   const { mutate: updateUpvote, isPending } = useReplyUpdateVote();
   const { mutate: updateReply, isPending: isUpdatePending } = useUpdateReply();
   const { mutate: toggleAccept, isPending: isAcceptPending } = useAcceptReply();
-  const { data: user } = useAuth();
+  const { data: sessionData } = authClient.useSession();
+  const user = sessionData?.user as { username?: string } | undefined;
 
   const reply = answerItem.answer;
 

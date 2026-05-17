@@ -7,7 +7,7 @@ import { useListSpaces } from "@/hooks/use-space";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/ui/user-avatar";
-import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -272,7 +272,8 @@ export function AppSidebar() {
   const [createOpen, setCreateOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: user } = useAuth();
+  const { data: sessionData } = authClient.useSession();
+  const user = sessionData?.user as User | undefined;
   const navItems: NavItem[] = [
     { icon: House, path: "/home", label: "Home" },
     { icon: MagnifyingGlass, path: "/explore", label: "Explore" },

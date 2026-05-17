@@ -17,7 +17,7 @@ import {
   useLeaveSpace,
   useListSpaces,
 } from "@/hooks/use-space";
-import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { SPACE_COLORS } from "@/components/spaces/consts";
 import { cn, getInitials } from "@/lib/utils";
 import { useDeleteQuestion, useQuestionsQuery } from "@/hooks/use-questions";
@@ -34,7 +34,8 @@ export default function SpacePage() {
   const { spaceId } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const { data: spacesData, isLoading: isSpaceLoading } = useListSpaces();
-  const { data: user } = useAuth();
+  const { data: sessionData } = authClient.useSession();
+  const user = sessionData?.user as { username?: string } | undefined;
   const spaces = spacesData || [];
   const space = spaces.find((c) => c.uid === spaceId);
   const { mutate: deleteQn } = useDeleteQuestion();

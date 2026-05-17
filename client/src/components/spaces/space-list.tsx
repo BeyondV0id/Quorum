@@ -4,7 +4,7 @@ import { Users, Plus, PencilSimple, MagnifyingGlass } from "@phosphor-icons/reac
 import { cn, getInitials } from "@/lib/utils";
 import { Link } from "react-router";
 import type { Space } from "@/types";
-import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { EditSpaceDialog } from "@/components/spaces/edit-space-dialog";
 function formatMemberCount(count: number): string {
   if (count >= 1000) {
@@ -19,7 +19,8 @@ interface SpaceCardProps {
 import { useJoinSpace, useLeaveSpace } from "@/hooks/use-space";
 import { SPACE_COLORS } from "./consts";
 export function SpaceCard({ space, compact = false }: SpaceCardProps) {
-  const { data: user } = useAuth();
+  const { data: sessionData } = authClient.useSession();
+  const user = sessionData?.user as { username?: string } | undefined;
   const joinMutation = useJoinSpace();
   const leaveMutation = useLeaveSpace();
   const isPending = joinMutation.isPending || leaveMutation.isPending;

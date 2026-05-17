@@ -1,22 +1,35 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { bearer } from "better-auth/plugins";
 
 import { db } from "../db/index.js";
 
+const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
+const authBaseURL = (process.env.BETTER_AUTH_URL ?? "https://echo-server-iji0.onrender.com").replace(/\/$/, "");
+
 export const auth = betterAuth({
+  baseURL: authBaseURL,
+
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
 
-  trustedOrigins: [(process.env.CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, "")],
-  
+  trustedOrigins: [clientURL],
 
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: "none",
+      secure: true,
+      httpOnly: true,
+    },
+  },
 
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
     autoSignIn: true,
+    sendResetPassword: async ({ user, url }) => {
+      console.log(`Password reset for ${user.email}: ${url}`);
+    },
   },
 
   socialProviders: {
@@ -78,10 +91,6 @@ export const auth = betterAuth({
       },
     },
   },
-
-  plugins: [
-    bearer(),
-  ],
 });
 
 export type Session = typeof auth.$Infer.Session;

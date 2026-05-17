@@ -39,7 +39,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useFetchProfile, useUpdateProfile } from "@/hooks/use-profile";
-import { useDeleteAccount, useSignout } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import type { User } from "@/types";
 import { useListSpaces } from "@/hooks/use-space";
 import { CreateSpaceDialog } from "@/components/spaces/create-space-dialog";
@@ -70,8 +70,8 @@ export default function Profile() {
   } = useUserQuestionsQuery();
   const questions = qnData || [];
   const { mutate: deleteQuestion } = useDeleteQuestion();
-  const { mutateAsync: deleteAccount } = useDeleteAccount();
-  const { mutate: signout } = useSignout();
+  const deleteAccount = async () => { const { error } = await authClient.deleteUser(); if (error) throw new Error(error.message); };
+  const signout = async () => { await authClient.signOut(); window.location.href = "/"; };
   const { setTheme } = useTheme();
   const [editForm, setEditForm] = useState<User>({
     username: "",
@@ -461,10 +461,10 @@ export default function Profile() {
                 variant="destructive"
                 onClick={async () => {
                   try {
-                    await deleteAccount(undefined);
+                    await deleteAccount();
                     toast.success("Account deleted successfully");
                     setIsDeleteOpen(false);
-                  } catch (err) {
+                  } catch {
                     toast.error("Failed to delete account");
                   }
                 }}

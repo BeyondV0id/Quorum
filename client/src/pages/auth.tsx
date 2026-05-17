@@ -3,12 +3,6 @@ import { useNavigate } from "react-router";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { AuthPayload } from "@/api/auth";
-import {
-  useSignin,
-  useSignup,
-  useRequestPasswordReset,
-} from "@/hooks/use-auth";
 import { authClient } from "@/lib/auth-client";
 
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -21,8 +15,8 @@ const authSchema = z.object({
 });
 
 type AuthMode = "signin" | "signup" | "forgot" | "forgot-success";
-
 type FormMode = "signin" | "signup" | "forgot";
+
 const HATCH = {
   backgroundImage:
     "repeating-linear-gradient(315deg, var(--border) 0, var(--border) 1px, transparent 0, transparent 50%)",
@@ -30,10 +24,7 @@ const HATCH = {
   backgroundAttachment: "fixed",
 } as const;
 
-const MODE_COPY: Record<
-  FormMode,
-  { title: string; description: string; submitLabel: string }
-> = {
+const MODE_COPY: Record<FormMode, { title: string; description: string; submitLabel: string }> = {
   signin: {
     title: "Welcome back",
     description: "Sign in to your Quorum account.",
@@ -84,104 +75,82 @@ function AuthSuccessCard({
   );
 }
 
-
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("signup");
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<AuthPayload>({
-    email: "",
-    password: "",
-  });
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isPending, setIsPending] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const formMode =
-    mode === "signin" || mode === "signup" || mode === "forgot"
-      ? mode
-      : "signin";
+  const formMode: FormMode =
+    mode === "signin" || mode === "signup" || mode === "forgot" ? mode : "signin";
 
-  const updateForm = (fields: Partial<AuthPayload>) => {
-    setForm((prev) => ({ ...prev, ...fields }));
-  };
-
-  const {
-    mutateAsync: signIn,
-    isPending: isInPending,
-    error: signInError,
-  } = useSignin();
-  const {
-    mutateAsync: signUp,
-    isPending: isUpPending,
-    error: signUpError,
-  } = useSignup();
-  const {
-    mutateAsync: requestReset,
-    isPending: isResetPending,
-    error: resetError,
-  } = useRequestPasswordReset();
-
-
+  const copy = MODE_COPY[formMode];
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const payload: AuthPayload = {
-      email: form.email.trim(),
-      password: form.password,
-    };
+    setAuthError(null);
 
+    const trimmedEmail = email.trim();
+
+    // Validate
     try {
       if (formMode !== "forgot") {
-        authSchema.parse(payload);
+        authSchema.parse({ email: trimmedEmail, password });
       } else {
-        z.string().email("Please enter a valid email").refine(e => e.endsWith("@gmail.com"), "Only Gmail accounts are currently supported").parse(payload.email);
+        z.string()
+          .email("Please enter a valid email")
+          .refine(e => e.endsWith("@gmail.com"), "Only Gmail accounts are currently supported")
+          .parse(trimmedEmail);
       }
-    } catch (err: any) {
+    } catch (err) {
       if (err instanceof z.ZodError) {
-        alert(err.issues[0].message);
+        setAuthError(err.issues[0].message);
         return;
       }
     }
 
+    setIsPending(true);
+
     try {
       if (formMode === "forgot") {
-        if (!payload.email) return;
-        await requestReset(payload.email);
+        const { error } = await authClient.requestPasswordReset({
+          email: trimmedEmail,
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (error) throw new Error(error.message ?? "Failed to send reset link");
         setMode("forgot-success");
         return;
       }
 
       if (formMode === "signup") {
-        if (!payload.email || !payload.password) return;
-        await signUp(payload);
+        const base = trimmedEmail.split("@")[0].replace(/[^a-zA-Z0-9]/g, "") || "user";
+        const { error } = await authClient.signUp.email({
+          email: trimmedEmail,
+          password,
+          name: base,
+          username: `${base}_${Math.random().toString(36).slice(2, 6)}`,
+        });
+        if (error) throw new Error(error.message ?? "Sign up failed");
         navigate("/home");
         return;
       }
 
-      if (!payload.email || !payload.password) return;
-      await signIn(payload);
+      // signin
+      const { error } = await authClient.signIn.email({
+        email: trimmedEmail,
+        password,
+      });
+      if (error) throw new Error(error.message ?? "Sign in failed");
       navigate("/home");
-    } catch {
-      // Error is already stored in the hook's error state and displayed in the UI.
-      // We just need to prevent unhandled rejection from breaking the form.
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : "Authentication failed");
+    } finally {
+      setIsPending(false);
     }
   }
-
-  // Google OAuth temporarily disabled
-  // async function handleSigninWithGoogle() {
-  //   await authClient.signIn.social({
-  //     provider: "google",
-  //     callbackURL: "/home",
-  //   });
-  // }
-  const error =
-    formMode === "forgot"
-      ? resetError
-      : formMode === "signup"
-        ? signUpError
-        : formMode === "signin"
-          ? signInError
-          : null;
-  const isLoading = isInPending || isUpPending || isResetPending;
-  const copy = MODE_COPY[formMode];
 
   if (mode === "forgot-success") {
     return (
@@ -191,7 +160,7 @@ export default function Auth() {
         title="Check your email"
         description={
           <>
-            If an account exists for <strong>{form.email}</strong>, we've sent
+            If an account exists for <strong>{email}</strong>, we've sent
             instructions to reset your password.
           </>
         }
@@ -206,7 +175,6 @@ export default function Auth() {
       </AuthSuccessCard>
     );
   }
-
 
   return (
     <div className="relative grid min-h-screen grid-cols-[1fr_2.5rem_auto_2.5rem_1fr] grid-rows-[1fr_1px_auto_1px_1fr] bg-background text-foreground">
@@ -235,25 +203,23 @@ export default function Auth() {
           <p className="mb-6 text-xs text-muted-foreground">{copy.description}</p>
 
           <form className="space-y-3" onSubmit={handleSubmit}>
-            {error && (
+            {authError && (
               <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2.5 text-xs text-destructive">
                 <HugeiconsIcon icon={Alert02Icon} size={14} />
-                <span>{error.message}</span>
+                <span>{authError}</span>
               </div>
             )}
 
-            {(mode === "signup" || mode === "forgot" || mode === "signin") && (
-              <Input
-                name="email"
-                type="email"
-                placeholder="Email"
-                autoComplete="email"
-                required
-                className="h-9 text-sm"
-                value={form.email}
-                onChange={(e) => updateForm({ email: e.target.value })}
-              />
-            )}
+            <Input
+              name="email"
+              type="email"
+              placeholder="Email"
+              autoComplete="email"
+              required
+              className="h-9 text-sm"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
 
             {mode !== "forgot" && (
               <Input
@@ -263,13 +229,13 @@ export default function Auth() {
                 autoComplete={mode === "signup" ? "new-password" : "current-password"}
                 required
                 className="h-9 text-sm"
-                value={form.password}
-                onChange={(e) => updateForm({ password: e.target.value })}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             )}
 
-            <Button className="h-9 w-full text-xs" type="submit" disabled={isLoading}>
-              {isLoading ? (
+            <Button className="h-9 w-full text-xs" type="submit" disabled={isPending}>
+              {isPending ? (
                 <HugeiconsIcon icon={Loading03Icon} className="size-4 animate-spin" />
               ) : (
                 copy.submitLabel
@@ -290,7 +256,7 @@ export default function Auth() {
             <button
               type="button"
               onClick={() =>
-                authClient.signIn.social({ provider: "github", callbackURL: "/home" })
+                authClient.signIn.social({ provider: "github", callbackURL: `${window.location.origin}/home` })
               }
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-xs font-medium text-card-foreground transition hover:bg-muted hover:opacity-90 active:scale-[0.98]"
             >

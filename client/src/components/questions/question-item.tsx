@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useRepliesQuery, useDeleteReply } from "@/hooks/use-replies";
 import { useUpdateVote } from "@/hooks/use-upvote";
-import { useAuth } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { usePinQuestion, useUnpinQuestion, useUpdateQuestion } from "@/hooks/use-questions";
 import type { QuestionItem } from "@/types";
 import { DotsThree, Trash, PencilSimple, Copy, WarningCircle, PushPin, PushPinSlash } from "@phosphor-icons/react";
@@ -82,7 +82,8 @@ export function QuestionItem({
   );
   const { mutate: deleteReply } = useDeleteReply();
   const { mutate: handleVote, isPending: isVotePending } = useUpdateVote();
-  const { data: user } = useAuth();
+  const { data: sessionData } = authClient.useSession();
+  const user = sessionData?.user as { username?: string } | undefined;
   const { mutate: updateQuestion, isPending: isUpdatePending } =
     useUpdateQuestion();
   const { mutate: pinQuestion, isPending: isPinPending } = usePinQuestion();

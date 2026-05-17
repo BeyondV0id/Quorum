@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useResetPassword } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert02Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 
@@ -21,7 +21,8 @@ export default function ResetPassword() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const { mutateAsync: resetPassword, isPending, error } = useResetPassword();
+  const [isPending, setIsPending] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -38,10 +39,15 @@ export default function ResetPassword() {
     if (!token) return;
 
     try {
-      await resetPassword({ token, newPassword });
+      setIsPending(true);
+      setError(null);
+      const { error: resetErr } = await authClient.resetPassword({ token, newPassword });
+      if (resetErr) throw new Error(resetErr.message);
       setSuccess(true);
     } catch (err) {
-      // hook error handles state
+      setError(err instanceof Error ? err : new Error("Failed to reset password"));
+    } finally {
+      setIsPending(false);
     }
   }
 

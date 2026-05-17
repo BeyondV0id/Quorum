@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useSearchParams } from "react-router";
-import { useVerifyEmail } from "@/hooks/use-auth";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,7 +19,10 @@ import {
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
-  const { mutateAsync: verify } = useVerifyEmail();
+  const verify = async (token: string) => {
+    const { error } = await authClient.verifyEmail({ query: { token } });
+    if (error) throw new Error(error.message);
+  };
   const [status, setStatus] = useState<
     "idle" | "pending" | "success" | "error"
   >(() => (token ? "pending" : "idle"));
