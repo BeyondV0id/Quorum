@@ -3,6 +3,20 @@ import { API_URL } from "@/config";
 
 export const authClient = createAuthClient({
   baseURL: API_URL,
+  fetchOptions: {
+    onRequest: (ctx) => {
+      const token = localStorage.getItem("bearer_token");
+      if (token) {
+        ctx.headers.set("Authorization", `Bearer ${token}`);
+      }
+    },
+    onResponse: (ctx) => {
+      const authToken = ctx.response.headers.get("set-auth-token");
+      if (authToken) {
+        localStorage.setItem("bearer_token", authToken);
+      }
+    },
+  },
   plugins: [
     {
       id: "custom-fields",
@@ -18,7 +32,7 @@ export const authClient = createAuthClient({
           }
         }
       }
-    }
+    } as any
   ],
 });
 
