@@ -132,7 +132,7 @@ export default function Auth() {
           password,
           name: base,
           username: `${base}_${Math.random().toString(36).slice(2, 6)}`,
-        });
+        } as Parameters<typeof authClient.signUp.email>[0]);
         if (error) throw new Error(error.message ?? "Sign up failed");
         navigate("/home");
         return;
