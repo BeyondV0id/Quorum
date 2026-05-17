@@ -20,6 +20,10 @@ export const auth = betterAuth({
     "https://echo-server-iji0.onrender.com",
   ],
 
+  session: {
+    expiresIn: 60 * 60 * 24, // 24 hours (matching 1000 * 60 * 60 * 24 ms)
+  },
+
   advanced: {
     defaultCookieAttributes: {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -28,7 +32,6 @@ export const auth = betterAuth({
     },
   },
   
-
 
   emailAndPassword: {
     enabled: true,

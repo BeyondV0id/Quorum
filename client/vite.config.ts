@@ -66,13 +66,13 @@ export default defineConfig(({ mode }) => {
         runtimeCaching: [
           {
             urlPattern: ({ url }) => {
-              return (
-                url.origin.includes("echo-server.up.railway.app") &&
-                url.pathname.match(
-                  /^\/(auth|users|questions|spaces|search)/
-                ) &&
-                true
+              const isLocalBackend =
+                url.origin.includes("localhost:3001") &&
+                url.pathname.match(/^\/(auth|users|questions|spaces|search)/);
+              const isProdBackend = url.pathname.match(
+                /^\/api\/(auth|users|questions|spaces|search)/
               );
+              return !!(isLocalBackend || isProdBackend);
             },
             handler: "NetworkOnly",
             options: {
