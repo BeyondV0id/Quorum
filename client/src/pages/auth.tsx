@@ -169,7 +169,7 @@ export default function Auth() {
   // async function handleSigninWithGoogle() {
   //   await authClient.signIn.social({
   //     provider: "google",
-  //     callbackURL: "/home",
+  //     callbackURL: `${window.location.origin}/home`,
   //   });
   // }
   const error =
@@ -290,7 +290,10 @@ export default function Auth() {
             <button
               type="button"
               onClick={() =>
-                authClient.signIn.social({ provider: "github", callbackURL: "/home" })
+                authClient.signIn.social({
+                  provider: "github",
+                  callbackURL: `${window.location.origin}/home`,
+                })
               }
               className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-xs font-medium text-card-foreground transition hover:bg-muted hover:opacity-90 active:scale-[0.98]"
             >
