@@ -15,13 +15,13 @@ export const auth = betterAuth({
 
   trustedOrigins: [clientURL],
 
-  advanced: {
-    defaultCookieAttributes: {
-      sameSite: "none",
-      secure: true,
-      httpOnly: true,
-    },
-  },
+  // advanced: {
+  //   defaultCookieAttributes: {
+  //     sameSite: "none",
+  //     secure: true,
+  //     httpOnly: true,
+  //   },
+  // },
 
   emailAndPassword: {
     enabled: true,
@@ -93,5 +93,5 @@ export const auth = betterAuth({
   },
 });
 
-export type Session = typeof auth.$Infer.Session;
+export type Session = typeof auth.$Infer.Session; 
 export type User = typeof auth.$Infer.Session.user;
