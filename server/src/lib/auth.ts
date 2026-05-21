@@ -15,13 +15,13 @@ export const auth = betterAuth({
 
   trustedOrigins: [clientURL],
 
-  // advanced: {
-  //   defaultCookieAttributes: {
-  //     sameSite: "none",
-  //     secure: true,
-  //     httpOnly: true,
-  //   },
-  // },
+  advanced: {
+    defaultCookieAttributes: {
+      sameSite: (process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://")) ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://"),
+      httpOnly: true,
+    },
+  },
 
   emailAndPassword: {
     enabled: true,

@@ -6,11 +6,10 @@ import { ThemeProvider } from "./components/theme-provider.tsx";
 import { StoreProvider } from "./context/StoreContext.tsx";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <StoreProvider>
-      <ThemeProvider defaultTheme="system" storageKey="echo-theme">
-        <App />
-      </ThemeProvider>
-    </StoreProvider>
-  </StrictMode>,
+  <StoreProvider>
+    <ThemeProvider defaultTheme="system" storageKey="echo-theme">
+      <App />
+    </ThemeProvider>
+  </StoreProvider>
+
 );
