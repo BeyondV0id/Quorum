@@ -1,8 +1,9 @@
 import { createAuthClient } from "better-auth/react";
-import { API_URL } from "@/config";
 
 export const authClient = createAuthClient({
-  baseURL: typeof window !== "undefined" ? window.location.origin : API_URL,
+  baseURL: import.meta.env.PROD
+    ? "https://quorum-io.vercel.app"
+    : "http://localhost:3000",
   fetchOptions: {
     credentials: "include",
   },
