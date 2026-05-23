@@ -4,7 +4,9 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db/index.js";
 
 const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
-const authBaseURL = (process.env.BETTER_AUTH_URL ?? "https://echo-server-iji0.onrender.com").replace(/\/$/, "");
+const authBaseURL = process.env.NODE_ENV === "production"
+  ? clientURL
+  : (process.env.BETTER_AUTH_URL ?? "http://localhost:3000");
 
 export const auth = betterAuth({
   baseURL: authBaseURL,
@@ -13,14 +15,21 @@ export const auth = betterAuth({
     provider: "pg",
   }),
 
-  trustedOrigins: [clientURL],
+  trustedOrigins: [
+    "https://quorum-io.vercel.app",
+    "https://quorum-io-git-*-vercel.app",
+  ],
 
   advanced: {
     defaultCookieAttributes: {
-      sameSite: (process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://")) ? "none" : "lax",
+      sameSite: "lax",
       secure: process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://"),
       httpOnly: true,
     },
+  },
+
+  account: {
+    skipStateCookieCheck: true,
   },
 
   emailAndPassword: {
