@@ -1,12 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { bearer } from "better-auth/plugins";
 
 import { db } from "../db/index.js";
 
 const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
-const authBaseURL = process.env.NODE_ENV === "production"
-  ? clientURL
-  : (process.env.BETTER_AUTH_URL ?? "http://localhost:3000");
+const authBaseURL = (process.env.BETTER_AUTH_URL ?? "https://echo-server-iji0.onrender.com").replace(/\/$/, "");
 
 export const auth = betterAuth({
   baseURL: authBaseURL,
@@ -15,21 +14,14 @@ export const auth = betterAuth({
     provider: "pg",
   }),
 
-  trustedOrigins: [
-    "https://quorum-io.vercel.app",
-    "https://quorum-io-git-*-vercel.app",
-  ],
+  trustedOrigins: [clientURL],
 
   advanced: {
     defaultCookieAttributes: {
-      sameSite: "lax",
+      sameSite: (process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://")) ? "none" : "lax",
       secure: process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://"),
       httpOnly: true,
     },
-  },
-
-  account: {
-    skipStateCookieCheck: true,
   },
 
   emailAndPassword: {
@@ -40,6 +32,10 @@ export const auth = betterAuth({
       console.log(`Password reset for ${user.email}: ${url}`);
     },
   },
+
+  plugins: [
+    bearer(),
+  ],
 
   socialProviders: {
     // google: {

@@ -21,6 +21,7 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    exposedHeaders: ["set-auth-token"],
   })
 );
 
@@ -52,12 +53,11 @@ app.get("/api/me", async (req, res) => {
   res.json(session);
 });
 
-// App routes (matching Go server)
-app.use("/users", usersRouter);
-app.use("/questions", questionsRouter);
-app.use("/questions/:uid/replies", repliesRouter);
-app.use("/spaces", spacesRouter);
-app.use("/search", searchRouter);
+app.use("/api/users", usersRouter);
+app.use("/api/questions", questionsRouter);
+app.use("/api/questions/:uid/replies", repliesRouter);
+app.use("/api/spaces", spacesRouter);
+app.use("/api/search", searchRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

@@ -31,12 +31,9 @@ export function useUpdateVote() {
 
     try {
       await updateVotes(qid);
-      // Optional: trigger refresh to sync with backend exactly, 
-      // but UI is already updated.
       triggerRefresh("questions");
       options?.onSuccess?.();
     } catch (err) {
-      // ROLLBACK on error
       updateStore(qid, { 
           isUpvoted: originalUpvoted, 
           upvotes: originalCount 
