@@ -1,6 +1,4 @@
 import { Link } from "react-router";
-import { authClient } from "@/lib/auth-client";
-import { CLIENT_URL } from "@/config";
 import { PixelHeading } from "@/components/ui/pixel-heading-word";
 
 const HATCH = {
