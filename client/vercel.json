@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/:match*",
-            "destination": "https://quorum-production-8003.up.railway.app/api/:match*"
+            "destination": "https://echo-server-iji0.onrender.com/api/:match*"
         },
         {
             "source": "/(.*)",
