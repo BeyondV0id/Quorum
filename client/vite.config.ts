@@ -62,16 +62,14 @@ export default defineConfig(({ mode }) => {
         ],
       },
       workbox: {
-        mode: "development",
+        navigateFallbackDenylist: [/^\/api/],
+        mode: mode === "production" ? "production" : "development",
         runtimeCaching: [
           {
             urlPattern: ({ url }) => {
               return (
-                url.origin.includes("echo-server.up.railway.app") &&
-                url.pathname.match(
-                  /^\/(auth|users|questions|spaces|search)/
-                ) &&
-                true
+                url.origin.includes("echo-server-iji0.onrender.com") ||
+                url.pathname.startsWith("/api/")
               );
             },
             handler: "NetworkOnly",
