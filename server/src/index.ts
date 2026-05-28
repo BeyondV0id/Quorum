@@ -12,7 +12,7 @@ import searchRouter from "./routes/search.js";
 const app = express();
 const PORT = process.env.PORT ?? 3001;
 const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
-const authBaseURL = (process.env.BETTER_AUTH_URL ?? "https://echo-server-iji0.onrender.com").replace(/\/$/, "");
+const authBaseURL = (process.env.BETTER_AUTH_URL ?? clientURL).replace(/\/$/, "");
 
 // CORS must run before Better Auth routes so cookies work cross-origin.
 app.use(

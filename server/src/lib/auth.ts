@@ -5,7 +5,7 @@ import { bearer } from "better-auth/plugins";
 import { db } from "../db/index.js";
 
 const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
-const authBaseURL = (process.env.BETTER_AUTH_URL ?? "https://echo-server-iji0.onrender.com").replace(/\/$/, "");
+const authBaseURL = (process.env.BETTER_AUTH_URL ?? clientURL).replace(/\/$/, "");
 
 export const auth = betterAuth({
   baseURL: authBaseURL,
