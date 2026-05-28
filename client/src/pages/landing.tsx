@@ -26,8 +26,8 @@ export default function Landing() {
       <div className="relative col-start-4 row-span-full hidden border-x border-border sm:block" style={HATCH} />
 
       {/* Horizontal border lines — desktop only */}
-      <div className="col-span-full row-start-2 hidden h-px bg-border sm:block" />
-      <div className="col-span-full row-start-4 hidden h-px bg-border sm:block" />
+      <div className="col-start-1 col-span-full row-start-2 hidden border-t border-border sm:block" />
+      <div className="col-span-full col-start-1 row-start-4 hidden border-t border-border sm:block" />
 
       {/* Main content card */}
       <div className="w-full sm:col-start-3 sm:row-start-3 sm:flex sm:w-[680px] sm:flex-col bg-muted p-2">
