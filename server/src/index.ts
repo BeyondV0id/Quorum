@@ -10,11 +10,14 @@ import spacesRouter from "./routes/spaces.js";
 import searchRouter from "./routes/search.js";
 
 const app = express();
+// Trust Render/Vercel reverse proxy so X-Forwarded-* headers are read correctly.
+// Required for OAuth callbacks and secure cookie handling behind a proxy.
+app.set("trust proxy", true);
 const PORT = process.env.PORT ?? 3001;
 const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
 const authBaseURL = (process.env.BETTER_AUTH_URL ?? clientURL).replace(/\/$/, "");
 
-// CORS must run before Better Auth routes so cookies work cross-origin.
+
 app.use(
   cors({
     origin: clientURL,
@@ -25,17 +28,13 @@ app.use(
   })
 );
 
-// Better Auth handles all /api/auth/* routes before express.json().
+
 app.all("/api/auth/*", toNodeHandler(auth));
 
-// JSON parsing for all other routes
+
 app.use(express.json());
 
 // Health check
-app.get("/ping", (_req, res) => {
-  res.json({ status: "ok" });
-});
-
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", origin: req.headers.origin });
 });
