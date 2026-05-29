@@ -4,25 +4,47 @@ import { bearer } from "better-auth/plugins";
 
 import { db } from "../db/index.js";
 
-const clientURL = (process.env.CLIENT_URL ?? "https://quorum-io.vercel.app").replace(/\/$/, "");
-const authBaseURL = (process.env.BETTER_AUTH_URL ?? clientURL).replace(/\/$/, "");
+const frontendURL = (
+  process.env.FRONTEND_URL ?? "https://quorum-io.vercel.app"
+).replace(/\/$/, "");
+
+const authURL = frontendURL;
+const isProd = process.env.NODE_ENV === "production";
 
 export const auth = betterAuth({
-  baseURL: authBaseURL,
+  baseURL: authURL,
+  secret: process.env.BETTER_AUTH_SECRET,
 
   database: drizzleAdapter(db, {
     provider: "pg",
   }),
 
-  trustedOrigins: [clientURL],
+  trustedOrigins: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:3000",
+    frontendURL,
+    "https://echo-server-iji0.onrender.com",
+  ].filter((url): url is string => Boolean(url)),
+
+  account: {
+    skipStateCookieCheck: true,
+    storeStateStrategy: "database",
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["github", "google"],
+    },
+  },
 
   advanced: {
+    useSecureCookies: isProd,
+    // Required: trust X-Forwarded-* headers from Vercel/Render proxy
+    trustedProxyHeaders: true,
+    // 'lax' works because Vercel proxies /api/* making auth same-origin.
+    // 'none' would signal third-party cookies — exactly what Safari ITP blocks.
     defaultCookieAttributes: {
-      // Use HTTPS-based detection, not NODE_ENV, so localhost (http) always gets lax/non-secure cookies.
-      // NODE_ENV can be 'production' locally (e.g. for build testing) but cookies must match the protocol.
-      sameSite: authBaseURL.startsWith("https://") ? "none" : "lax",
-      secure: authBaseURL.startsWith("https://"),
-      httpOnly: true,
+      sameSite: "lax",
+      secure: isProd,
     },
   },
 
@@ -41,12 +63,12 @@ export const auth = betterAuth({
 
   socialProviders: {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID as string,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
     github: {
-      clientId: process.env.GITHUB_CLIENT_ID as string,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
       mapProfileToUser: (profile) => ({
         username: profile.login,
         displayUsername: profile.login,
@@ -100,5 +122,5 @@ export const auth = betterAuth({
   },
 });
 
-export type Session = typeof auth.$Infer.Session; 
+export type Session = typeof auth.$Infer.Session;
 export type User = typeof auth.$Infer.Session.user;
