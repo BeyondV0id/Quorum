@@ -18,8 +18,10 @@ export const auth = betterAuth({
 
   advanced: {
     defaultCookieAttributes: {
-      sameSite: (process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://")) ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production" || authBaseURL.startsWith("https://"),
+      // Use HTTPS-based detection, not NODE_ENV, so localhost (http) always gets lax/non-secure cookies.
+      // NODE_ENV can be 'production' locally (e.g. for build testing) but cookies must match the protocol.
+      sameSite: authBaseURL.startsWith("https://") ? "none" : "lax",
+      secure: authBaseURL.startsWith("https://"),
       httpOnly: true,
     },
   },
