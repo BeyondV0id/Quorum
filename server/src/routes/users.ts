@@ -6,8 +6,6 @@ import type { AuthRequest } from "../middleware/auth.js";
 import { db } from "../db/index.js";
 import { user, questions, questionUpvotes, notifications } from "../db/schema.js";
 import { z } from "zod";
-import { auth } from "../lib/auth.js";
-import { fromNodeHeaders } from "better-auth/node";
 
 const updateUserSchema = z.object({
   username: z.string().regex(/^[^\s]+$/, "username cannot contain spaces").optional(),
@@ -82,16 +80,11 @@ router.patch("/me", requireAuth, async (req: Request, res: Response): Promise<vo
       }
     }
     await db.update(user).set({
-      ...(newUsername ? { username: newUsername, displayUsername: newUsername } : {}),
+      ...(newUsername ? { username: newUsername, displayUsername: newUsername, name: newUsername } : {}),
       ...(bio !== undefined ? { bio } : {}),
       ...(avatar !== undefined ? { avatar } : {}),
       ...(link !== undefined ? { links: link } : {}),
     }).where(eq(user.id, id));
-
-    // Sync Better Auth session so the new username is reflected immediately
-    if (newUsername) {
-      await auth.api.updateUser({ body: { username: newUsername } as any, headers: fromNodeHeaders(req.headers) });
-    }
 
     res.json({ message: "profile updated" });
   } catch { res.status(500).json({ error: "failed to update profile" }); }

@@ -129,7 +129,7 @@ export default function Auth() {
           email: trimmedEmail,
           password,
           name: base,
-          username: `${base}_${Math.random().toString(36).slice(2, 6)}`,
+          username: base,
         } as Parameters<typeof authClient.signUp.email>[0]);
         if (error) throw new Error(error.message ?? "Sign up failed");
         window.location.href = "/home";
