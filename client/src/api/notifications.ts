@@ -1,4 +1,4 @@
-import { API_URL } from "@/config";
+import { authFetch } from "@/config";
 
 export interface Notification {
   uid: string;
@@ -14,9 +14,7 @@ export interface Notification {
 }
 
 export async function listNotifications(): Promise<Notification[]> {
-  const res = await fetch(`${API_URL}/users/me/notifications`, {
-    credentials: "include",
-  });
+  const res = await authFetch(`/api/users/me/notifications`);
   if (!res.ok) throw new Error("failed");
   return res.json();
 }

@@ -1,20 +1,17 @@
-import { API_URL } from "@/config";
+import { authFetch } from "@/config";
 import type { UserSummary } from "@/types";
 
 export async function searchUsers(query: string): Promise<UserSummary[]> {
   const params = new URLSearchParams({ q: query });
-  const res = await fetch(`${API_URL}/users/search?${params}`, {
-    credentials: "include",
-  });
+  const res = await authFetch(`/api/users/search?${params}`);
   if (!res.ok) throw new Error("Failed to search users");
   return res.json();
 }
 
 export async function resolveUsers(usernames: string[]): Promise<string[]> {
-  const res = await fetch(`${API_URL}/users/resolve`, {
+  const res = await authFetch(`/api/users/resolve`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    credentials: "include",
     body: JSON.stringify({ usernames }),
   });
   if (!res.ok) throw new Error("Failed to resolve users");
