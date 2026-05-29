@@ -1,5 +1,5 @@
 import type { QuestionDraft, QuestionItem } from "@/types";
-import { authFetch, apiPath } from "@/config";
+import { authFetch } from "@/config";
 
 export async function fetchQuestion(questionId: string) {
   const res = await authFetch(
